@@ -270,6 +270,25 @@ const phaseInitializers = {
   ended(data) {
     buildFinalScoresUI(data.players);
     stopTimer();
+    const winner = data.players[0];
+    if (winner) {
+      const nameDisp = document.getElementById('winner-name-display');
+      const ptsDisp = document.getElementById('winner-points-display');
+      if (nameDisp) nameDisp.textContent = winner.username;
+      if (ptsDisp) ptsDisp.textContent = `${winner.score.toLocaleString()} points`;
+    }
+
+    const hostCtrls = document.getElementById('host-ended-controls');
+    const backBtn = document.getElementById('back-to-lobby-btn');
+    const me = allPlayers.find(p => p.id === myPlayerId);
+    if (hostCtrls && me && (me.isHost || me.is_host)) {
+      hostCtrls.classList.remove('hidden');
+    }
+    if (backBtn) {
+      backBtn.onclick = () => {
+        socket.emit('back-to-lobby', { roomCode, playerId: myPlayerId });
+      };
+    }
   },
 
   waiting() {

@@ -840,6 +840,54 @@ io.on('connection', (socket) => {
     io.to(code).emit('music-update', { currentMusic: room.currentMusic || DEFAULT_MUSIC[0], musicPlaying: playing });
   });
 
+  socket.on('back-to-lobby', async ({ roomCode, playerId }) => {
+    const code = roomCode.toUpperCase();
+    const room = await getRoomData(code);
+    const players = await getPlayersInRoom(code);
+    const player = players.find(p => p.id === playerId);
+    
+    if (!player || !(player.is_host || player.isHost)) return;
+
+    // Reset room state
+    const updateData = {
+      phase: 'lobby',
+      round: 0,
+      payload: {
+        drawings: {},
+        copies: {},
+        votes: {},
+        prompts: {},
+        gallery: [],
+        currentVotingSetIndex: 0,
+        setVotes: {}
+      }
+    };
+
+    if (supabase) {
+      await supabase.from('rooms').update(updateData).eq('code', code);
+      await supabase.from('players').update({ is_ready: false, score: 0 }).eq('room_code', code);
+      // Host stays ready usually or we can reset all
+      await supabase.from('players').update({ is_ready: true }).eq('id', player.id);
+    } else {
+      mockRooms[code] = { 
+        ...mockRooms[code], 
+        ...updateData,
+        payload: updateData.payload 
+      };
+      mockRooms[code].players.forEach(p => {
+        p.score = 0;
+        p.is_ready = (p.id === player.id);
+      });
+    }
+
+    const updatedPlayers = await getPlayersInRoom(code);
+    io.to(code).emit('phase-change', { phase: 'lobby' });
+    io.to(code).emit('player-list', updatedPlayers.map(p => ({
+      id: p.id, username: p.username, color: p.color, 
+      isHost: p.is_host || p.isHost, isReady: p.is_ready || p.isReady, score: 0
+    })));
+  });
+
   socket.on('disconnect', async () => {
     // Basic cleanup: in a production app with Supabase, you might keep them in the DB
     // but mark them as offline. For now, we'll just handle the event.
