@@ -359,7 +359,20 @@ async function nextPhaseAfterVoting(roomCode) {
     const finalPlayers = players
       .map(p => ({ id: p.id, username: p.username, color: p.color, score: p.score || 0 }))
       .sort((a,b) => b.score - a.score);
-    io.to(roomCode).emit('phase-change', { phase: 'ended', players: finalPlayers });
+    
+    // First show final scoreboard
+    io.to(roomCode).emit('phase-change', { 
+      phase: 'results', 
+      duration: 5,
+      players: finalPlayers,
+      round: currentRound,
+      isFinal: true
+    });
+
+    const t = setTimeout(() => {
+      io.to(roomCode).emit('phase-change', { phase: 'ended', players: finalPlayers });
+    }, 5 * 1000);
+    gameTimers[roomCode] = [t];
   } else {
      // Show intermediate results (scoreboard) after every round
      if (supabase) {
@@ -543,8 +556,8 @@ io.on('connection', (socket) => {
      const player = players.find(p => p.id === playerId);
      if (!player || !(player.is_host || player.isHost)) return;
 
-     if (players.length < 4) {
-       socket.emit('error', { message: 'Minimum 4 players required to start.' });
+     if (players.length < 2) {
+       socket.emit('error', { message: 'Minimum 2 players required to start.' });
        return;
      }
 
@@ -845,8 +858,7 @@ io.on('connection', (socket) => {
     const room = await getRoomData(code);
     const players = await getPlayersInRoom(code);
     const player = players.find(p => p.id === playerId);
-    
-    if (!player || !(player.is_host || player.isHost)) return;
+    if (!player) return;
 
     // Reset room state
     const updateData = {

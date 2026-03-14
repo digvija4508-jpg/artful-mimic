@@ -264,11 +264,43 @@ const phaseInitializers = {
 
   scores(data) {
     buildScoresUI(data.players, data.isFinal);
-    startTimer(15, 'next round starting soon');
+    startTimer(data.duration || 15, 'next round starting soon');
+  },
+
+  scoreboard(data) {
+    buildFinalScoresUI(data.players);
+    const duration = data.duration || 5;
+    startTimer(duration, 'final winner reveal...');
+    
+    // Progress Bar & Countdown logic
+    const progressFill = document.getElementById('scoreboard-progress-fill');
+    const timerNum = document.getElementById('scoreboard-timer-num');
+    if (progressFill && timerNum) {
+      let timeLeft = duration;
+      const step = 0.1;
+      const interval = setInterval(() => {
+        timeLeft -= step;
+        if (timeLeft <= 0) {
+          clearInterval(interval);
+          timeLeft = 0;
+        }
+        if (progressFill) progressFill.style.width = (timeLeft / duration * 100) + '%';
+        if (timerNum) timerNum.textContent = Math.ceil(timeLeft);
+      }, step * 1000);
+    }
+
+    const hostCtrls = document.getElementById('host-scoreboard-controls');
+    const backBtn = document.getElementById('scoreboard-back-to-lobby-btn');
+    // Show for everyone as per user request
+    if (hostCtrls) hostCtrls.classList.remove('hidden');
+    if (backBtn) {
+      backBtn.onclick = () => {
+        socket.emit('back-to-lobby', { roomCode, playerId: myPlayerId });
+      };
+    }
   },
 
   ended(data) {
-    buildFinalScoresUI(data.players);
     stopTimer();
     const winner = data.players[0];
     if (winner) {
@@ -280,10 +312,8 @@ const phaseInitializers = {
 
     const hostCtrls = document.getElementById('host-ended-controls');
     const backBtn = document.getElementById('back-to-lobby-btn');
-    const me = allPlayers.find(p => p.id === myPlayerId);
-    if (hostCtrls && me && (me.isHost || me.is_host)) {
-      hostCtrls.classList.remove('hidden');
-    }
+    // Show for everyone as per user request
+    if (hostCtrls) hostCtrls.classList.remove('hidden');
     if (backBtn) {
       backBtn.onclick = () => {
         socket.emit('back-to-lobby', { roomCode, playerId: myPlayerId });
@@ -373,15 +403,20 @@ function setupCanvas(canvas, ctx, historyArr, toolbarId) {
   function endStroke() {
     if (!drawing) return;
     drawing = false;
-    if (currentPath.points.length > 0) historyArr.push({...currentPath});
+    ctx.closePath();
+    if (currentPath && currentPath.points.length > 0) {
+      historyArr.push(currentPath);
+      currentPath = null;
+    }
   }
 
   canvas.addEventListener('mousedown', startStroke);
-  canvas.addEventListener('mousemove', doStroke);
-  canvas.addEventListener('mouseup', endStroke);
-  canvas.addEventListener('touchstart', (e) => { e.preventDefault(); startStroke(e); });
-  canvas.addEventListener('touchmove', (e) => { e.preventDefault(); doStroke(e); });
-  canvas.addEventListener('touchend', endStroke);
+  window.addEventListener('mousemove', doStroke);
+  window.addEventListener('mouseup', endStroke);
+
+  canvas.addEventListener('touchstart', (e) => { e.preventDefault(); startStroke(e); }, { passive: false });
+  window.addEventListener('touchmove', (e) => { if (drawing) e.preventDefault(); doStroke(e); }, { passive: false });
+  window.addEventListener('touchend', endStroke);
 }
 
 function undoCanvas(canvas, ctx, historyArr) {
@@ -470,7 +505,10 @@ socket.on('phase-change', async (data) => {
     }, (duration || 10) * 1000);
   } else if (phase === 'vote_set') loadPhase('voting', data);
   else if (phase === 'reveal_set') loadPhase('reveal', data);
-  else if (phase === 'results') loadPhase('scores', data);
+  else if (phase === 'results') {
+    if (data.isFinal) loadPhase('scoreboard', data);
+    else loadPhase('scores', data);
+  }
   else if (phase === 'ended') loadPhase('ended', data);
   else if (phase === 'final-round') loadPhase('final_round', data);
 });
@@ -501,7 +539,7 @@ function buildVotingUI(set, participants) {
   set.entries.forEach(entry => {
     const card = document.createElement('div');
     card.className = 'vote-card' + (isMySet ? ' disabled-card' : '');
-    card.innerHTML = `<img src="${entry.dataUrl}" class="vote-card-img"><div class="vote-card-label">${isMySet ? 'view only' : 'pick me!'}</div>`;
+    card.innerHTML = `<img src="${entry.dataUrl || '/logo.png'}" class="vote-card-img" alt="Artwork"><div class="vote-card-label">${isMySet ? 'view only' : 'pick me!'}</div>`;
     if (!isMySet) {
       card.onclick = () => {
         container.querySelectorAll('.vote-selection-badge').forEach(b => b.remove());
@@ -536,7 +574,7 @@ function buildRevealUI(set, results) {
     card.innerHTML = `
       <div class="reveal-voter-row">${(voterMap[entry.playerId] || []).map(n => `<div class="reveal-voter-badge-box">${n}</div>`).join('')}</div>
       <div class="reveal-card-header">${isOrig ? 'ORIGINAL' : 'COPY'}</div>
-      <img src="${entry.dataUrl}" class="reveal-card-img">
+      <img src="${entry.dataUrl || '/logo.png'}" class="reveal-card-img" alt="Artwork">
       <div class="reveal-stamp ${isOrig ? 'original' : 'copy'}">${isOrig ? 'Original' : 'Copy'}</div>
       <div class="reveal-card-footer">by ${entry.username || 'Artist'}</div>
     `;
@@ -580,7 +618,18 @@ function buildScoresUI(players, isFinal) {
 
 function buildFinalScoresUI(players) {
   const list = document.getElementById('final-scores-list');
-  if (list) list.innerHTML = players.map(p => `<div class="score-row ${p.id === myPlayerId ? 'me-row' : ''}"><div class="score-row-bullet"><span>•</span><span>${p.username}</span></div><div>${p.score}</div></div>`).join('');
+  if (list) {
+    list.innerHTML = players.map(p => {
+      const isHost = p.isHost || p.is_host;
+      return `<div class="score-row ${p.id === myPlayerId ? 'me-row' : ''}">
+        <div class="score-row-bullet">
+          <span>${isHost ? '👑' : '•'}</span>
+          <span>${p.username}</span>
+        </div>
+        <div>${p.score}</div>
+      </div>`;
+    }).join('');
+  }
 }
 
 // ── UI Components ────────────────────────────────────────────────────────────
@@ -627,7 +676,7 @@ function checkHostControls(players) {
   
   const startBtn = document.getElementById('start-btn');
   if (startBtn && isHost) {
-    const minPlayers = 4;
+    const minPlayers = 2;
     const allReady = players.every(p => p.isReady || p.is_ready);
     if (players.length >= minPlayers && allReady) {
       startBtn.disabled = false;

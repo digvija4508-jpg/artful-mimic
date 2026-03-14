@@ -1,0 +1,21 @@
+<div id="view-scoreboard" class="phase-screen">
+  <div class="scores-paper">
+    <h2 class="handwritten">final scores</h2>
+    <div id="final-scores-list"></div>
+    
+    <div id="host-scoreboard-controls" class="hidden" style="margin-top: 20px; text-align: center;">
+      <button id="scoreboard-back-to-lobby-btn" class="lobby-btn" style="background: #000; color: #fff; padding: 10px 30px; font-size: 1.2rem; cursor: pointer;">BACK TO LOBBY</button>
+    </div>
+
+    <!-- Loading Bar & Timer -->
+    <div id="scoreboard-progress-container" style="margin-top: 25px; width: 80%; max-width: 300px; margin-left: auto; margin-right: auto;">
+      <div style="font-family: 'Gochi Hand'; font-size: 1.2rem; margin-bottom: 5px; color: #333;">Winner reveal in <span id="scoreboard-timer-num">5</span>s</div>
+      <div class="progress-bar-bg" style="width: 100%; height: 10px; background: #eee; border: 2px solid #000; border-radius: 5px; overflow: hidden;">
+        <div id="scoreboard-progress-fill" style="width: 100%; height: 100%; background: #000; transition: width 0.1s linear;"></div>
+      </div>
+    </div>
+
+    <div class="score-row empty-row">&nbsp;</div>
+    <div class="score-row empty-row">&nbsp;</div>
+  </div>
+</div>
