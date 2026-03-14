@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Copyrighted Artists — Multiplayer Drawing Game</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎨</text></svg>">
+</head>
+<body class="home-page">
+  <div id="toast-container"></div>
+
+  <div class="home-wrap anim-fade">
+    <div class="home-content">
+      
+      <!-- Hero Section -->
+      <div class="logo-block anim-slide-up">
+        <img src="/logo.png" style="width: 180px; height: auto; margin-bottom: 20px; border-radius: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.15);">
+        <h1 class="logo-title" style="font-size: 5rem; line-height: 0.9; margin-bottom: 10px; font-family: 'Outfit', sans-serif; font-weight: 900;">copyrighted<br>artists</h1>
+        <p class="anim-writing" style="font-size: 1.8rem; margin-top: 5px; opacity: 0.8;">copy or be copied. there is no middle ground.</p>
+      </div>
+
+
+      <!-- Action Cards -->
+      <div class="home-cards anim-slide-up" style="animation-delay: 0.2s;">
+        <!-- Create Room -->
+        <div class="card card-lined sketchy-wiggle" style="transform: rotate(-1deg);">
+          <div style="font-size: 2rem; font-weight: 900; margin-bottom: 15px;">Host Server</div>
+          <p style="margin-bottom: 25px; font-size: 1.2rem; opacity: 0.8;">Set up a private session for your group.</p>
+          <div style="margin-bottom: 20px;">
+            <input type="text" id="create-username" class="input input-lg" placeholder="Artist Name" maxlength="12">
+          </div>
+          <button class="btn btn-primary btn-lg w-full" id="create-btn">START NEW GALLERY</button>
+        </div>
+
+        <!-- Join Room -->
+        <div class="card card-lined sketchy-wiggle" style="transform: rotate(1deg);">
+          <div style="font-size: 2rem; font-weight: 900; margin-bottom: 15px;">Join Server</div>
+          <p style="margin-bottom: 25px; font-size: 1.2rem; opacity: 0.8;">Enter a code to join an ongoing exhibition.</p>
+          <div style="margin-bottom: 20px; display: flex; gap: 15px;">
+            <input type="text" id="join-username" class="input" style="flex:2;" placeholder="Name" maxlength="12">
+            <input type="text" id="join-code" class="input" style="flex:1; text-transform: uppercase;" placeholder="CODE" maxlength="6">
+          </div>
+          <button class="btn btn-cyan btn-lg w-full" id="join-btn">JOIN EXHIBITION</button>
+        </div>
+      </div>
+
+      <!-- How to Play Section -->
+      <div class="how-to-play anim-slide-up" style="animation-delay: 0.4s; margin-top: 60px;">
+        <div class="htp-card card" style="transform: rotate(-1deg);">
+          <div class="htp-icon">✏️</div>
+          <div class="htp-title">1. DRAW</div>
+          <div class="htp-desc">Create an original masterpiece based on your prompt.</div>
+        </div>
+        <div class="htp-card card" style="transform: rotate(1deg);">
+          <div class="htp-icon">📋</div>
+          <div class="htp-title">2. COPY</div>
+          <div class="htp-desc">Everyone tries to copy one of the drawings from memory!</div>
+        </div>
+        <div class="htp-card card" style="transform: rotate(-0.5deg);">
+          <div class="htp-icon">🔍</div>
+          <div class="htp-title">3. VOTE</div>
+          <div class="htp-desc">Find the original among the sea of sketchy fakes.</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    console.log('📝 Home Page Script Loading...');
+    window.onerror = (msg, url, line) => {
+      console.error(`🔴 Script Error: ${msg} at ${url}:${line}`);
+      showToast(`Script error: ${msg}`, 'error');
+    };
+    const socket = io();
+    console.log('📡 Socket initialized');
+    socket.on('connect_error', (err) => console.error('❌ Connection error:', err));
+
+    function showToast(msg, type = '') {
+      const el = document.createElement('div');
+      el.className = `toast${type ? ' toast-' + type : ''}`;
+      el.textContent = msg;
+      el.style.position = 'fixed';
+      el.style.bottom = '20px';
+      el.style.right = '20px';
+      el.style.background = 'white';
+      el.style.border = '3px solid black';
+      el.style.padding = '10px 20px';
+      el.style.zIndex = '10000';
+      document.getElementById('toast-container').appendChild(el);
+      setTimeout(() => el.remove(), 3000);
+    }
+
+    socket.on('error', ({ message }) => showToast(message, 'error'));
+
+    socket.on('room-joined', (data) => {
+      console.log('✅ Received room-joined:', data);
+      const { roomCode, playerId, room } = data;
+      localStorage.setItem('pid', playerId);
+      if (room && room.players) {
+        const userObj = room.players.find(p => p.id === playerId);
+        localStorage.setItem('username', userObj ? userObj.username : '');
+      }
+      console.log('📍 Redirecting to:', `/room/${roomCode}`);
+      window.location.href = `/room/${roomCode}`;
+    });
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const inviteCode = urlParams.get('room');
+    if (inviteCode) {
+      document.getElementById('join-code').value = inviteCode.toUpperCase();
+      document.getElementById('join-username').focus();
+    }
+
+    document.getElementById('create-btn').addEventListener('click', () => {
+      console.log('👆 Create button clicked');
+      if (!socket.connected) return showToast('Not connected to server!', 'error');
+      const username = document.getElementById('create-username').value.trim();
+      if (!username) return showToast('Enter your name!', 'error');
+      console.log('🚀 Requesting room creation for:', username);
+      socket.emit('create-room', { username });
+    });
+
+    document.getElementById('join-btn').addEventListener('click', () => {
+      console.log('👆 Join button clicked');
+      if (!socket.connected) return showToast('Not connected to server!', 'error');
+      const username = document.getElementById('join-username').value.trim();
+      const code = document.getElementById('join-code').value.trim().toUpperCase();
+      if (!username) return showToast('Enter your name!', 'error');
+      if (code.length < 4) return showToast('Enter valid code!', 'error');
+      console.log('👤 Requesting to join room:', code);
+      socket.emit('join-room', { roomCode: code, username });
+    });
+
+    [document.getElementById('create-username'), document.getElementById('join-username'), document.getElementById('join-code')].forEach(el => {
+      el.addEventListener('keydown', e => {
+        if(e.key === 'Enter') {
+          if(el.id === 'create-username') document.getElementById('create-btn').click();
+          else document.getElementById('join-btn').click();
+        }
+      });
+    });
+  </script>
+</body>
+</html>

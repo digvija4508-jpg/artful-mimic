@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checkout — Support Artful Mimic</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #5468ff;
+            --dark-card: #1c1c1e;
+            --accent: #00d2ff;
+        }
+
+        body.checkout-body {
+            background: #000 !important;
+            color: #fff;
+            font-family: 'Outfit', sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        /* ── Floating Background ── */
+        .ambient-glow {
+            position: fixed;
+            width: 60vw; height: 60vw;
+            background: radial-gradient(circle, rgba(84, 104, 255, 0.15) 0%, transparent 70%);
+            top: -20%; right: -20%;
+            z-index: -1;
+            filter: blur(80px);
+            animation: pulse 10s infinite alternate;
+        }
+
+        @keyframes pulse { from { opacity: 0.5; transform: scale(1); } to { opacity: 0.8; transform: scale(1.2); } }
+
+        /* ── Checkout Box ── */
+        .checkout-box {
+            width: 480px;
+            background: var(--dark-card);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.5);
+            text-align: center;
+            backdrop-filter: blur(10px);
+            position: relative;
+        }
+
+        .checkout-header { margin-bottom: 30px; }
+        .checkout-logo { width: 80px; height: auto; border-radius: 12px; margin-bottom: 15px; }
+        .checkout-title { font-size: 1.8rem; font-weight: 900; letter-spacing: -0.5px; margin-bottom: 5px; }
+        .checkout-subtitle { opacity: 0.5; font-weight: 300; font-size: 1.1rem; }
+
+        /* ── Preloader ── */
+        #payment-preloader {
+            padding: 60px 0;
+        }
+        .vault-icon {
+            font-size: 4rem;
+            animation: bounceIn 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            margin-bottom: 20px;
+        }
+        @keyframes bounceIn { from { transform: scale(0.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+        .spinner {
+            width: 30px; height: 30px;
+            border: 3px solid rgba(255,255,255,0.1);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            margin: 15px auto;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ── QR & Buttons ── */
+        #payment-interface { display: none; }
+        
+        .qr-card {
+            background: #fff;
+            padding: 20px;
+            border-radius: 15px;
+            width: 200px;
+            height: 200px;
+            margin: 0 auto 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .qr-img { width: 100%; height: 100%; }
+
+        .payment-methods { display: flex; flex-direction: column; gap: 15px; }
+        .btn-pay {
+            background: var(--primary);
+            color: #fff;
+            padding: 16px;
+            border-radius: 12px;
+            font-weight: 500;
+            font-size: 1.1rem;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: all 0.2s;
+            border: none;
+            cursor: pointer;
+        }
+        .btn-pay:hover { background: #6b7cff; transform: translateY(-2px); }
+
+        .secured-badge {
+            margin-top: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            opacity: 0.3;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .back-link {
+            position: absolute; top: 20px; left: 20px;
+            color: #fff; opacity: 0.3; text-decoration: none; font-size: 0.9rem;
+        }
+        .back-link:hover { opacity: 1; }
+
+        .hidden { display: none; }
+    </style>
+</head>
+<body class="checkout-body">
+    <div class="ambient-glow"></div>
+    
+    <div class="checkout-box">
+        <a href="/about.html" class="back-link">← Cancel</a>
+        
+        <div class="checkout-header">
+            <img src="/logo.png" class="checkout-logo">
+            <div class="checkout-title">Artful Mimic</div>
+            <div class="checkout-subtitle">Secure Server Donation</div>
+        </div>
+
+        <!-- 1. Processing Logic -->
+        <div id="payment-preloader">
+            <div class="vault-icon">🛡️</div>
+            <div style="font-size: 1.2rem; filter: drop-shadow(0 0 10px #5468ff);">Securing connection...</div>
+            <div class="spinner"></div>
+            <p style="opacity: 0.4; font-size: 0.9rem; margin-top: 20px;">Establishing encrypted tunnel to UPI</p>
+        </div>
+
+        <!-- 2. Final Interface -->
+        <div id="payment-interface">
+            <div class="qr-card">
+                <img id="upi-qr" class="qr-img" src="" alt="UPI QR Code">
+            </div>
+            
+            <p style="margin-bottom: 25px; opacity: 0.6; font-size: 1.1rem;">Scan with any UPI app to pay</p>
+            
+            <div class="secured-badge">
+                <span>🔒 Secure</span>
+                <span>⚡ UPI</span>
+                <span>💎 Rupay</span>
+            </div>
+        </div>
+
+        <div style="margin-top: 30px; padding: 10px; border-top: 1px solid rgba(255,255,255,0.05);">
+            <div style="font-size: 0.9rem; opacity: 0.5;">Verified Recipient: <span style="color:var(--accent)">Digvijay Kumar</span></div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Set the QR image to our secure proxy endpoint
+            document.getElementById('upi-qr').src = '/api/qr-image';
+
+            // Simulation delay (WOW effect)
+            setTimeout(() => {
+                document.getElementById('payment-preloader').classList.add('hidden');
+                document.getElementById('payment-interface').style.display = 'block';
+            }, 2200);
+        });
+    </script>
+</body>
+</html>

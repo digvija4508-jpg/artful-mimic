@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Copyrighted Artists — Multiplayer Drawing Game</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎨</text></svg>">
+</head>
+<body style="background-image: url('https://www.transparenttextures.com/patterns/old-paper.png'); background-color: #f4ecd8;">
+  
+  <!-- Decorative Background Elements -->
+  <div class="ink-stain" style="top: 10%; right: 5%; width: 300px; height: 300px; background-image: url('https://img.icons8.com/plasticine/400/palette.png'); opacity: 0.1;"></div>
+  <div class="ink-stain" style="bottom: 20%; left: 10%; width: 250px; height: 250px; background-image: url('https://img.icons8.com/plasticine/400/paint-palette.png'); opacity: 0.12; transform: rotate(45deg);"></div>
+  <!-- Diegetic Palette Knife -->
+  <img src="https://img.icons8.com/plasticine/400/palette-knife.png" style="position: absolute; left: 20px; bottom: 50px; width: 120px; transform: rotate(-45deg); filter: drop-shadow(5px 5px 15px rgba(0,0,0,0.2)); z-index: 50;" alt="palette knife">
+
+  <div class="home-wrap anim-fade">
+    <div class="home-content">
+      
+      <!-- Hero Section -->
+      <div class="logo-block anim-slide-up" style="margin-bottom: 60px; position: relative;">
+        <!-- Diegetic Palette Knife -->
+        <img src="https://img.icons8.com/plasticine/200/palette.png" style="position: absolute; left: -120px; top: -20px; width: 100px; transform: rotate(-15deg); filter: drop-shadow(5px 5px 10px rgba(0,0,0,0.1));" alt="palette">
+        
+        <h1 class="logo-title" style="font-size: 5.5rem; line-height: 0.85; margin-bottom: 10px; font-family: 'Outfit', sans-serif; font-weight: 900; color: #1A1A1A;">artists</h1>
+        <p style="font-size: 1.8rem; font-family: 'Gochi Hand'; color: #333; opacity: 0.9;">copy or be copied. there is no middle ground.</p>
+        
+        <!-- Diegetic Pencil -->
+        <img src="https://img.icons8.com/plasticine/200/pencil.png" style="position: absolute; right: -100px; bottom: 0; width: 80px; transform: rotate(20deg); filter: drop-shadow(5px 5px 5px rgba(0,0,0,0.1));" alt="pencil">
+      </div>
+
+      <!-- Main Action Cards -->
+      <div class="home-cards anim-slide-up" style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px; width: 100%;">
+        
+        <!-- Host Section -->
+        <div class="paper-card" style="padding: 40px; transform: rotate(-1.5deg);">
+           <h2 style="font-size: 2.2rem; margin-bottom: 10px;">Host Server</h2>
+           <p style="color: #666; margin-bottom: 30px; font-size: 1.1rem;">Set up a private session for your group.</p>
+           <input type="text" id="create-username" class="input" style="background: rgba(0,0,0,0.03); border-bottom: 2px solid #1a1a1a; box-shadow: none; border-top:none; border-left:none; border-right:none; margin-bottom: 25px; font-size: 1.6rem; border-radius:0;" placeholder="Verifier" maxlength="12">
+           <button class="watercolor-btn btn-purple-ink w-full" id="create-btn" style="padding: 16px; font-size: 1.2rem;">START NEW GALLERY</button>
+        </div>
+
+        <!-- Join Section -->
+        <div class="paper-card" style="padding: 40px; transform: rotate(1.2deg);">
+           <h2 style="font-size: 2.2rem; margin-bottom: 10px;">Join Server</h2>
+           <p style="color: #666; margin-bottom: 30px; font-size: 1.1rem;">Enter a code to join an ongoing exhibition.</p>
+           <div style="display: flex; gap: 15px; margin-bottom: 25px;">
+              <input type="text" id="join-username" class="input" style="flex: 2; background: rgba(0,0,0,0.03); border-bottom: 2px solid #1a1a1a; box-shadow: none; border-top:none; border-left:none; border-right:none; border-radius:0;" placeholder="Name" maxlength="12">
+              <input type="text" id="join-code" class="input" style="flex: 1; background: rgba(0,0,0,0.03); border-bottom: 2px solid #1a1a1a; box-shadow: none; border-top:none; border-left:none; border-right:none; text-transform: uppercase; border-radius:0;" placeholder="CODE" maxlength="6">
+           </div>
+           <button class="watercolor-btn btn-teal-ink w-full" id="join-btn" style="padding: 16px; font-size: 1.2rem;">JOIN EXHIBITION</button>
+        </div>
+      </div>
+
+      <!-- 3-Step Guide (Bottom Section) -->
+      <div class="how-to-play anim-slide-up" style="margin-top: 100px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; width: 100%;">
+        <div class="paper-card" style="padding: 24px; text-align: center; transform: rotate(-0.5deg);">
+           <img src="https://cdn-icons-png.flaticon.com/512/3063/3063822.png" style="width: 44px; margin-bottom: 12px; opacity: 0.8;">
+           <div style="font-weight: 900; font-size: 1.2rem; font-family: 'Outfit';">1. DRAW</div>
+           <p style="font-size: 0.95rem; color: #555;">Create an original masterpiece based on your prompt.</p>
+        </div>
+        <div class="paper-card" style="padding: 24px; text-align: center; transform: rotate(1.5deg);">
+           <img src="https://cdn-icons-png.flaticon.com/512/3209/3209265.png" style="width: 44px; margin-bottom: 12px; opacity: 0.8;">
+           <div style="font-weight: 900; font-size: 1.2rem; font-family: 'Outfit';">2. COPY</div>
+           <p style="font-size: 0.95rem; color: #555;">Everyone tries to copy one of the drawings from memory!</p>
+        </div>
+        <div class="paper-card" style="padding: 24px; text-align: center; transform: rotate(-1.2deg);">
+           <img src="https://cdn-icons-png.flaticon.com/512/2810/2810200.png" style="width: 44px; margin-bottom: 12px; opacity: 0.8;">
+           <div style="font-weight: 900; font-size: 1.2rem; font-family: 'Outfit';">3. VOTE</div>
+           <p style="font-size: 0.95rem; color: #555;">Find the original among the sea of sketchy fakes.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div id="toast-container"></div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    
+    function showToast(msg, type = '') {
+      const el = document.createElement('div');
+      el.className = `toast${type ? ' toast-' + type : ''}`;
+      el.textContent = msg;
+      document.getElementById('toast-container').appendChild(el);
+      setTimeout(() => el.remove(), 3000);
+    }
+
+    socket.on('room-joined', (data) => {
+      localStorage.setItem('pid', data.playerId);
+      window.location.href = `/room/${data.roomCode}`;
+    });
+
+    document.getElementById('create-btn').addEventListener('click', () => {
+      const username = document.getElementById('create-username').value.trim();
+      if (!username) return showToast('Enter your name!');
+      socket.emit('create-room', { username });
+    });
+
+    document.getElementById('join-btn').addEventListener('click', () => {
+      const username = document.getElementById('join-username').value.trim();
+      const code = document.getElementById('join-code').value.trim().toUpperCase();
+      if (!username || !code) return showToast('Fill all fields!');
+      socket.emit('join-room', { roomCode: code, username });
+    });
+  </script>
+</body>
+</html>

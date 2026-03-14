@@ -1,0 +1,1886 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Room — Copyright Artist</title>
+  <link rel="stylesheet" href="/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎨</text></svg>">
+  <style>
+    :root { 
+      --bg: #EAE8E4; 
+      --paper: #FDFBF7;
+      --text: #1A1A1A; 
+      --ink: #1A1A1A;
+      --accent: #27ae60;
+      --shadow: 4px 4px 0px #1A1A1A;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ── Audio Elements ── */
+    #audio-container { display: none; }
+    
+    body { 
+      overflow-y: auto !important;
+      background-color: transparent !important;
+      font-family: 'Gochi Hand', cursive; 
+      color: var(--text); 
+      position: relative;
+      min-height: 100.1vh; /* Slight overflow to ensure scrollbar trigger if needed */
+    }
+    
+    /* ── Global Timer (Floating Ink Well) ── */
+    #global-timer-well {
+      position: fixed; bottom: 70px !important; left: 15px !important; z-index: 2000;
+      display: flex; align-items: center; gap: 12px;
+      background: #000; color: #fff; padding: 8px 16px;
+      box-shadow: 4px 4px 12px rgba(0,0,0,0.3); border-radius: 50px;
+      font-family: 'Outfit', sans-serif; font-size: 1.6rem; font-weight: 900;
+      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      top: auto !important; right: auto !important; transform: none !important;
+    }
+    #global-timer-well.hurry { background: #e74c3c; animation: hurryPulse 0.5s infinite alternate; transform: scale(1.1) !important; }
+    #global-timer-well.hidden { transform: translateY(160px) !important; opacity: 0; pointer-events: none; }
+    
+    /* ─── STAMPS ─────────────────────────────────────────────────────── */
+    .reveal-stamp {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%) rotate(-15deg);
+      font-family: 'Outfit', sans-serif;
+      font-weight: 900;
+      font-size: 3rem;
+      padding: 10px 20px;
+      border: 8px double;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      pointer-events: none;
+      z-index: 20;
+      opacity: 0;
+      animation: stampIn 0.5s cubic-bezier(.34,1.56,.64,1) forwards;
+      mix-blend-mode: multiply;
+    }
+    .reveal-stamp.original {
+      color: #27ae60;
+      border-color: #27ae60;
+      background: rgba(39, 174, 96, 0.1);
+    }
+    .reveal-stamp.copy {
+      color: #f1c40f;
+      border-color: #f1c40f;
+      background: rgba(241, 196, 15, 0.1);
+    }
+    @keyframes stampIn {
+      from { transform: translate(-50%, -50%) rotate(-15deg) scale(3); opacity: 0; }
+      to { transform: translate(-50%, -50%) rotate(-15deg) scale(1); opacity: 0.8; }
+    }
+
+    .lb-row {
+      transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.2s;
+    }
+    .lb-score { transition: all 0.3s; }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      pointer-events: none;
+      opacity: 0.04;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+    }
+    .hidden { display: none !important; }
+    
+    /* ── Ink Bar ── */
+    #ink-bar-container {
+      position: fixed; bottom: 0; left: 0; right: 0; height: 56px; z-index: 100;
+      background: #222; display: flex; align-items: center; justify-content: center;
+    }
+    #ink-bar-fill {
+      position: absolute; left: 0; top: 0; bottom: 0; background: #555;
+      transition: width 1s linear;
+    }
+    #ink-bar-text {
+      position: relative; z-index: 1;
+      color: #fff; font-size: 1.4rem; letter-spacing: 0.05em;
+    }
+    #ink-bar-container.hidden { display: none !important; }
+
+    /* ── Player List (top-right dark panel, Roblox style) ── */
+    #players-panel {
+      position: fixed; top: 10px; right: 10px; z-index: 1000;
+      background: #4a4a4a; border-radius: 6px; border: none;
+      min-width: 180px; max-width: 240px; box-shadow: 4px 4px 15px rgba(0,0,0,0.2);
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    #players-panel.minimized {
+      transform: translateX(calc(100% - 40px));
+    }
+    #players-panel-toggle {
+      position: absolute; top: 0; left: 0; bottom: 0; width: 40px;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      color: #fff; font-size: 1.2rem; font-weight: bold; background: rgba(0,0,0,0.1);
+      border-radius: 6px 0 0 6px;
+    }
+    #players-panel-list { padding: 12px 16px 12px 48px; }
+    .panel-player-name {
+      display: flex; justify-content: space-between; align-items: center; color: #fff; font-family: 'Gochi Hand', cursive;
+      font-size: 1.05rem; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    .panel-player-name.me { color: #fff; font-weight: bold; }
+    .panel-status { font-size: 0.9rem; color: #aaa; font-family: 'Gochi Hand', cursive; }
+    .panel-status.done { color: #27ae60; font-weight: bold; }
+
+    /* ── Full-Screen Phase Screens ── */
+    .phase-screen {
+      position: fixed; inset: 0; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      background: var(--bg);
+    }
+
+    /* ── Lobby ── */
+    #view-lobby { 
+      position: absolute; 
+      top: 0; left: 0; right: 0; 
+      min-height: 100vh; 
+      background: transparent !important; 
+      display: flex; 
+      flex-wrap: wrap;
+      align-items: center; 
+      justify-content: center; 
+      gap: 60px; 
+      padding: 100px 40px;
+    }
+    .lobby-card-lined {
+      background: #fff; border: 2px solid #1A1A1A; border-radius: 4px;
+      padding: 60px 40px 40px; box-shadow: 4px 4px 0 rgba(0,0,0,0.1);
+      position: relative; text-align: center;
+      background-image: repeating-linear-gradient(transparent, transparent 38px, #ddd 38px, #ddd 40px);
+      background-position: 0 10px;
+      max-width: 440px;
+      width: 100%;
+    }
+    @media (max-width: 1100px) {
+      #view-lobby {
+        flex-direction: column;
+        gap: 40px;
+        padding: 100px 20px 40px;
+        justify-content: flex-start;
+        align-items: center;
+      }
+      .lobby-card-lined {
+        padding: 40px 20px 30px;
+        min-height: auto;
+      }
+    }
+    @media (max-height: 500px) and (orientation: landscape) {
+      #view-lobby { padding-top: 60px; gap: 30px; }
+      .lobby-card-lined { padding: 30px 20px; }
+      #players-panel { top: 5px; right: 5px; transform: scale(0.9); transform-origin: top right; }
+    }
+    
+    /* ── Jukebox (Host only) ── */
+    #jukebox-card { margin-top: 20px; text-align: left; }
+    .jukebox-select { 
+      width: 100%; padding: 8px; font-family: 'Gochi Hand'; border: 2px solid #000; 
+      background: #fdfbf7; cursor: pointer; margin-bottom: 10px;
+    }
+    .jukebox-controls { display: flex; gap: 10px; }
+    
+    /* ── Score Popups ── */
+    .score-popup {
+      position: absolute; right: 10px; top: 0; color: #ffd700;
+      font-weight: bold; font-size: 1.4rem; pointer-events: none;
+      animation: scoreFloat 1.5s ease-out forwards;
+      z-index: 1000; text-shadow: 2px 2px 0 #000;
+      font-family: 'Gochi Hand';
+    }
+    @keyframes scoreFloat {
+      0% { opacity: 0; transform: translateY(0); }
+      20% { opacity: 1; transform: translateY(-10px); }
+      100% { opacity: 0; transform: translateY(-40px); }
+    }
+    .panel-player-name { position: relative; }
+    .lobby-card {
+      background: #fff; border: 2px solid #1A1A1A; border-radius: 4px;
+      padding: 40px; min-width: 300px; max-width: 420px;
+      box-shadow: 4px 4px 0 #1A1A1A;
+    }
+    .lobby-card h1 { font-size: 2.8rem; margin-bottom: 24px; }
+    .lobby-card p { font-size: 1.2rem; margin-bottom: 12px; }
+    .room-code-big { font-size: 3rem; font-weight: 900; letter-spacing: 4px; }
+    .lobby-btn {
+      display: block; width: 100%; margin-top: 24px; padding: 14px;
+      background: #1A1A1A; color: #fff; border: none; border-radius: 4px;
+      font-family: 'Gochi Hand', cursive; font-size: 1.4rem; cursor: pointer;
+      transition: transform .1s, background .15s;
+    }
+    .lobby-btn:hover { background: #333; transform: scale(1.02); }
+    .lobby-btn.ready-active { background: #27ae60; }
+
+    /* ── Drawing Phase ── */
+    #view-drawing {
+      position: fixed; inset: 0 0 56px 0; background: var(--bg);
+      display: flex; align-items: center; justify-content: center; gap: 40px;
+    }
+    @media (max-width: 900px) {
+       #view-drawing { gap: 15px; padding: 10px; flex-direction: row; align-items: flex-start; }
+       #drawing-prompt-area { max-width: 200px; }
+       #drawing-prompt-area .phase-label { font-size: 1.2rem; }
+       #drawing-prompt-text { font-size: 1.4rem; }
+       #drawing-canvas { max-width: 100%; max-height: 80vh; width: auto !important; height: auto !important; }
+    }
+    #drawing-prompt-area {
+      display: flex; flex-direction: column; gap: 20px;
+      max-width: 380px; text-align: left;
+    }
+    #drawing-prompt-area .phase-label { font-size: 2rem; }
+    #drawing-prompt-area .hint { font-size: 1.1rem; }
+    #drawing-prompt-text { font-size: 1.7rem; font-weight: 900; }
+
+    #drawing-canvas {
+      background: #fff; border: 2px solid #ccc;
+      box-shadow: 4px 4px 0 #aaa;
+      cursor: crosshair; touch-action: none;
+    }
+    .canvas-controls { display: flex; gap: 12px; margin-top: 10px; justify-content: center; }
+    .canvas-btn {
+      padding: 10px 28px; border: 2px solid #1A1A1A; background: #fff;
+      font-family: 'Gochi Hand', cursive; font-size: 1.2rem;
+      cursor: pointer; border-radius: 4px; transition: background .15s;
+    }
+    .canvas-btn:hover { background: #eee; }
+    .canvas-btn.primary { background: #1A1A1A; color: #fff; }
+    .canvas-btn.primary:hover { background: #333; }
+
+    /* ── Drawing Tools ── */
+    .canvas-toolbar {
+      display: flex; gap: 8px; margin-bottom: 12px; padding: 10px;
+      background: #fff; border: 2px solid #1A1A1A; border-radius: 8px;
+      justify-content: center; align-items: center; box-shadow: 4px 4px 0 rgba(0,0,0,0.1);
+    }
+    .tool-btn {
+      width: 34px; height: 34px; border-radius: 50%; border: 2px solid transparent;
+      cursor: pointer; transition: transform .1s, border-color .2s; position: relative;
+      display: flex; align-items: center; justify-content: center; background: none;
+    }
+    .tool-btn:hover { transform: scale(1.1); }
+    .tool-btn.active { border-color: #1A1A1A; transform: scale(1.1); background: rgba(0,0,0,0.05); }
+    .tool-eraser { background: #f0f0f0; font-size: 1.2rem; border-radius: 6px; }
+    .tool-clear { background: #ff4757; color: white; border-radius: 6px; font-weight: bold; font-family: 'Gochi Hand', cursive; font-size: 0.8rem; padding: 0 8px; height: 32px; border: none; }
+    .tool-size { background: #555; border-radius: 50%; border: none; }
+    .tool-divider { width: 1px; height: 24px; background: #ddd; margin: 0 4px; }
+    .color-btn { border-width: 2px; }
+
+    /* ── Observe Phase (full-screen drawing reveal) ── */
+    #view-observe {
+      position: fixed; inset: 0; background: var(--bg);
+      display: flex; align-items: center; justify-content: center;
+    }
+    #observe-canvas-area {
+      width: 400px; height: 560px; background: #fff;
+      border: 3px solid #1A1A1A; position: relative;
+      box-shadow: 12px 12px 0 rgba(0,0,0,0.1);
+      display: flex; align-items: center; justify-content: center;
+      padding: 10px; overflow: hidden;
+    }
+    #observe-img {
+      max-width: 100%; max-height: 100%; object-fit: contain;
+      transition: transform 0.5s ease;
+    }
+    #observe-text-overlay {
+      position: absolute; inset: 0; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; pointer-events: none;
+      background: rgba(255,255,255,0.25); backdrop-filter: blur(2px);
+      text-align: center; z-index: 10; transition: opacity 0.5s, backdrop-filter 0.5s;
+    }
+    #observe-main-text {
+      font-size: 3.8rem; font-weight: 900; margin-bottom: 8px;
+      text-transform: lowercase; letter-spacing: -1px;
+      animation: obsPop 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    #observe-sub-text {
+      font-size: 1.6rem; color: #444; opacity: 0.8;
+      animation: fadeIn 1s ease both 0.3s;
+    }
+    @keyframes obsPop { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    
+    .obs-hidden-overlay #observe-text-overlay { opacity: 0; backdrop-filter: blur(0); }
+    .obs-top #observe-main-text { 
+      position: absolute; top: 10px; font-size: 2rem; 
+      transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* ── Copy Phase (blank canvas, from memory) ── */
+    #view-copying {
+      position: fixed; inset: 0 0 56px 0; background: var(--bg);
+      display: flex; align-items: center; justify-content: center; flex-direction: column;
+      gap: 16px;
+    }
+    #copying-canvas {
+      background: #fff; border: 2px solid #ccc;
+      box-shadow: 4px 4px 0 #aaa;
+      cursor: crosshair; touch-action: none;
+    }
+
+    /* ── Transition screens (blank grey + centered text) ── */
+    .transition-screen {
+      position: fixed; inset: 0; background: var(--bg);
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px;
+    }
+    .transition-screen h1 { font-size: 4rem; text-align: center; }
+    .transition-screen p { font-size: 1.8rem; text-align: center; }
+    .transition-screen .pts-bold { font-weight: 900; }
+
+    /* ── Split Screen (Knowledge Phase) ── */
+    .split-screen {
+      position: fixed; inset: 0; background: var(--bg);
+      display: flex; align-items: center; justify-content: center; gap: 80px;
+    }
+    .split-left {
+      width: 340px; height: 480px; background: #fff;
+      border: 2px solid #ccc; box-shadow: 4px 4px 0 #aaa;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    /* ── SVG Fake Drawing ── */
+    @keyframes fakeDraw { from { stroke-dashoffset: 800; } to { stroke-dashoffset: 0; } }
+    .fd-path {
+      fill: none; stroke: #1A1A1A; stroke-width: 8; stroke-linecap: round; stroke-linejoin: round;
+      stroke-dasharray: 800; stroke-dashoffset: 800;
+      animation: fakeDraw 1.5s cubic-bezier(0.4, 0.0, 0.2, 1) forwards;
+    }
+    .fd-d1 { animation-delay: 0.5s; }
+    .fd-d2 { animation-delay: 1.5s; }
+    .fd-d3 { animation-delay: 2.0s; }
+    .fd-d4 { animation-delay: 2.5s; }
+
+    /* ── Lobby UI ── */
+    .lobby-card-lined {
+      background: #fff; border: 2px solid #1A1A1A; border-radius: 4px;
+      padding: 60px 40px 40px; box-shadow: 4px 4px 0 rgba(0,0,0,0.1);
+      position: relative; text-align: center;
+      background-image: repeating-linear-gradient(transparent, transparent 38px, #ddd 38px, #ddd 40px);
+      background-position: 0 10px;
+    }
+    .lobby-player-bubble {
+      background: #fff; padding: 4px 20px; 
+      font-size: 1.2rem; position: relative; z-index: 10; 
+      font-family: 'Gochi Hand', cursive; color: #1A1A1A;
+      box-shadow: 2px 2px 0 rgba(0,0,0,0.1); width: fit-content; margin: 6px auto;
+    }
+    @keyframes spinStar { 100% { transform: rotate(360deg); } }
+    .split-right {
+      max-width: 500px; display: flex; flex-direction: column; gap: 24px;
+    }
+    .split-right p { font-size: 1.8rem; line-height: 1.4; color: #1A1A1A; }
+    .split-right .pts-bold { font-weight: 900; }
+    
+
+
+    #view-final-round strong { font-weight: 900; }
+
+    /* ── Round 2 Splash (blue theme) ── */
+    #view-round-2 {
+      position: fixed; inset: 0;
+      background: radial-gradient(ellipse at center, #d0e7ff 0%, #edf5ff 70%);
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px;
+      z-index: 1000;
+    }
+    #view-round-2 .splash-content {
+      display: flex; flex-direction: column; align-items: center; gap: 20px;
+    }
+    #view-round-2 .info-card {
+      border: 3px solid #3b82f6; border-radius: 12px; padding: 20px 40px;
+      text-align: center; color: #1e3a8a; font-size: 1.4rem; line-height: 1.6;
+    }
+    #view-round-2 .timer-next {
+      font-size: 1.8rem; font-weight: 700; color: #3b82f6; margin-top: 10px;
+    }
+
+    /* ── Voting Phase ── */
+    #view-voting {
+      position: fixed; inset: 0 0 56px 0; background: var(--bg);
+      display: flex; flex-direction: column;
+    }
+    #voting-prompt-title {
+      font-size: 2.8rem; text-align: center; padding: 20px 0 4px;
+    }
+    #voting-type-label {
+      font-size: 1.3rem; text-align: center; margin-bottom: 16px; color: #555;
+    }
+    #voting-cards {
+      flex: 1; display: grid; align-items: center; justify-content: center; gap: 30px;
+      padding: 20px; overflow-y: auto;
+      margin: 0 auto;
+    }
+    .vote-card {
+      display: flex; flex-direction: column; align-items: center;
+      cursor: pointer; transition: transform .15s;
+    }
+    .vote-card:hover { transform: translateY(-6px); }
+    .vote-card-label { font-size: 1.2rem; margin-bottom: 8px; color: #555; }
+    .vote-card-img {
+      width: 340px; height: 480px; background: #fff; 
+      border: 2px solid #ccc; object-fit: contain;
+      box-shadow: 3px 3px 0 #aaa;
+    }
+    .vote-card-img.selected { border-color: #27ae60; box-shadow: 0 0 0 4px #27ae60; }
+    .vote-voter-names {
+      display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;
+      margin-bottom: 8px; min-height: 24px;
+    }
+    .voter-bubble {
+      background: #fff; border: 1px solid #1A1A1A; border-radius: 4px;
+      padding: 2px 8px; font-size: 0.9rem; font-family: 'Outfit', sans-serif;
+    }
+
+    /* ── Vote Reveal: shows all drawings with original/copy labels ── */
+    #view-reveal {
+      position: fixed; inset: 0; background: var(--bg);
+      display: flex; flex-direction: column; overflow: hidden;
+    }
+    #reveal-prompt-title { font-size: 2.5rem; text-align: center; padding: 18px 0 4px; }
+    #reveal-type-label { font-size: 1.1rem; text-align: center; padding-bottom: 10px; color: #555; }
+    #reveal-cards {
+      flex: 1; display: grid; align-items: center; justify-content: center; gap: 20px;
+      padding: 20px; overflow-y: auto;
+      margin: 0 auto;
+    }
+    .reveal-card { display: flex; flex-direction: column; align-items: center; position: relative; }
+    .reveal-card-img {
+      width: 300px; height: 430px; background: #fff; 
+      border: 2px solid #ccc; object-fit: contain; position: relative;
+    }
+    .reveal-voter-row {
+      display: flex; gap: 6px; flex-wrap: wrap; justify-content: center;
+      margin-bottom: 6px; min-height: 22px;
+    }
+    .reveal-voter-bubble {
+      background: #fff; border: 1px solid #333; border-radius: 3px;
+      padding: 1px 6px; font-size: 0.85rem; font-family: 'Outfit', sans-serif;
+    }
+    .reveal-card-type-label {
+      font-size: 1.4rem; margin-top: 8px;
+    }
+    .reveal-card-artist {
+      font-size: 1rem; color: #555; font-family: 'Outfit', sans-serif;
+    }
+    .reveal-original-badge { color: #1A1A1A; font-weight: bold; }
+    .reveal-copy-badge { color: #1A1A1A; }
+    .reveal-card-img.original-highlight { border-color: #27ae60; box-shadow: 0 0 0 4px #27ae60; }
+    
+    @keyframes floatUp { 0% { opacity: 0; transform: translateY(10px) scale(0.8); } 20% { opacity: 1; transform: translateY(0) scale(1.1); } 80% { opacity: 1; transform: translateY(-40px) scale(1.1); } 100% { opacity: 0; transform: translateY(-60px) scale(1); } }
+    .floating-pts { position: absolute; top: -30px; left: 50%; transform: translateX(-50%); color: #27ae60; font-weight: 900; font-size: 2rem; text-shadow: 2px 2px 0 #fff; animation: floatUp 2s forwards; pointer-events: none; z-index: 50; }
+
+    /* ── Prompt Reveal ── */
+    #view-prompt-reveal {
+      position: fixed; inset: 0; background: var(--bg);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+    }
+    @keyframes prFade { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes prPop { 0% { opacity: 0; transform: scale(0.8); } 60% { opacity: 1; transform: scale(1.1); } 100% { opacity: 1; transform: scale(1); } }
+    @keyframes prPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.2); } }
+    .pr-label { font-size: 2.5rem; color: #555; animation: prFade 0.5s ease-out; margin-bottom: 20px; }
+    .pr-text { font-size: 6rem; font-weight: 900; animation: prPop 0.6s cubic-bezier(0.2, 0.8, 0.2, 1.2) forwards; text-align: center; padding: 0 40px; }
+    .pr-cd { font-size: 8rem; font-weight: 900; margin-top: 40px; animation: prPulse 1s infinite; }
+
+    /* ── Scores Card (white lined paper) ── */
+    #view-scores {
+      position: fixed; inset: 0; background: var(--bg);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .scores-paper {
+      background: #fff; border: 1px solid #ccc;
+      width: 440px; padding: 30px 40px;
+      box-shadow: 4px 4px 0 #ccc;
+    }
+    .scores-paper h2 {
+      font-size: 3rem; margin-bottom: 20px; text-align: center;
+    }
+    .scores-paper .score-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 10px 0; border-bottom: 1px solid #333; font-size: 1.4rem;
+    }
+    .scores-paper .score-row:first-of-type { border-top: 1px solid #333; }
+    .scores-paper .score-row.me-row { font-weight: 900; font-size: 1.5rem; }
+    .scores-paper .score-row.empty-row { border-bottom: 1px solid #ddd; padding: 8px 0; }
+    .score-row-bullet { display: flex; align-items: center; gap: 8px; }
+
+    /* ── Game Ended / Final Scores ── */
+    #view-ended {
+      position: fixed; inset: 0; background: var(--bg);
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    /* ── Toast ── */
+    #toast-container {
+      position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+      z-index: 999; display: flex; flex-direction: column; gap: 8px;
+    }
+    .toast {
+      background: #1A1A1A; color: #fff; padding: 12px 24px; border-radius: 4px;
+      font-family: 'Gochi Hand', cursive; font-size: 1.1rem;
+      animation: toastIn .3s ease; max-width: 400px; text-align: center;
+    }
+    @keyframes toastIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes inkDraw { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0% 0 0); } }
+    @keyframes popIn { 
+      from { transform: scale(0.8); opacity: 0; } 
+      to { transform: scale(1); opacity: 1; } 
+    }
+    @keyframes hurryPulse { 
+      from { transform: scale(1); filter: drop-shadow(0 0 10px rgba(0,0,0,0.1)); } 
+      to { transform: scale(1.05); filter: drop-shadow(0 0 20px rgba(231, 76, 60, 0.4)); color: #e74c3c; } 
+    }
+    
+    .lobby-card-lined::after {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-image: linear-gradient(rgba(160, 211, 232, 0.3) 1px, transparent 1px);
+      background-size: 100% 38px;
+      pointer-events: none;
+      z-index: 1;
+    }
+    
+    .polaroid {
+      background: #fff;
+      padding: 15px;
+      padding-bottom: 40px;
+      border: 1px solid #ddd;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      transition: transform 0.3s ease;
+    }
+    .reveal-card-header {
+      font-size: 1.2rem;
+      font-weight: 900;
+      margin-bottom: 15px;
+      color: #333;
+    }
+    .reveal-voter-row {
+      position: absolute;
+      top: -15px;
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      z-index: 10;
+      flex-wrap: wrap;
+    }
+    .reveal-voter-badge-box, .vote-selection-badge {
+      background: #fff;
+      border: 3px solid #000;
+      padding: 8px 16px;
+      font-family: 'Outfit', sans-serif;
+      font-weight: 900;
+      font-size: 1.1rem;
+      box-shadow: 4px 4px 0px #000;
+      animation: popIn 0.3s cubic-bezier(.34,1.56,.64,1);
+    }
+    .vote-selection-badge {
+      position: absolute;
+      top: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+    .reveal-overlay-text {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(-5deg);
+      font-size: 3.5rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      pointer-events: none;
+      opacity: 0.9;
+      text-shadow: 2px 2px 0px #fff;
+    }
+    .reveal-overlay-text.original { color: #27ae60; }
+    .reveal-overlay-text.copy { color: #f1c40f; }
+
+    .reveal-card-footer {
+      position: absolute;
+      bottom: 20px;
+      left: 0;
+      right: 0;
+      padding: 0 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .reveal-artist-name {
+      font-size: 1.1rem;
+      font-weight: 900;
+      color: #666;
+    }
+    .reveal-artist-avatar {
+      width: 32px;
+      height: 32px;
+      border: 2px solid #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      font-weight: 900;
+      background: #f0f0f0;
+    }
+
+    /* Ink Bottle HUD */
+    #ink-bottle-hud {
+      position: fixed; top: 20px; left: 20px; z-index: 500;
+      display: flex; align-items: flex-end; gap: 10px;
+    }
+    .ink-bottle {
+      width: 40px; height: 60px; border: 3px solid #1A1A1A; position: relative;
+      background: #eee; border-radius: 4px 4px 8px 8px; overflow: hidden;
+    }
+    .ink-bottle-fill {
+      position: absolute; bottom: 0; left: 0; right: 0; background: #1A1A1A;
+      transition: height 0.3s ease;
+    }
+  </style>
+</head>
+<body class="room-page">
+  <div id="orientation-overlay">
+    <div class="icon">📱</div>
+    <h2 style="font-family:'Gochi Hand';">Please rotate your device</h2>
+    <p style="font-family:'Gochi Hand'; opacity: 0.8;">Landscape mode provides the best drawing experience!</p>
+  </div>
+
+  <!-- Global Timer Well -->
+  <div id="global-timer-well" class="hidden">
+    <span class="well-icon">⏳</span>
+    <span id="global-timer-text">00</span>
+  </div>
+
+  <div id="audio-container">
+    <audio id="sfx-click" src="https://www.zapsplat.com/wp-content/uploads/2015/sound-effects-one/plastic_button_click.mp3"></audio>
+    <audio id="sfx-success" src="https://www.zapsplat.com/wp-content/uploads/2015/sound-effects-four-o-four/office_desk_bell_ring_ping.mp3"></audio>
+    <audio id="bg-music" loop></audio>
+  </div>
+
+  <!-- Player List Panel (Roblox-style top-right dark panel) -->
+  <div id="players-panel">
+    <div id="players-panel-toggle">➖</div>
+    <div id="players-panel-list"></div>
+  </div>
+
+  <!-- Ink Bottle HUD -->
+  <div id="ink-bottle-hud" class="hidden">
+    <div class="ink-bottle">
+      <div class="ink-bottle-fill" style="height: 100%;"></div>
+    </div>
+    <div style="font-size: 1.2rem; font-weight: 900; text-transform: uppercase;">Ink</div>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toast-container"></div>
+
+  <!-- Ink Timer Bar (bottom, dark) -->
+  <div id="ink-bar-container" class="hidden">
+    <div id="ink-bar-fill" style="width:100%"></div>
+    <span id="ink-bar-text">waiting...</span>
+  </div>
+
+  <!-- ═══════════════ LOBBY ═══════════════ -->
+  <div id="view-lobby" class="hidden">
+    
+    <!-- Logo Card Box -->
+    <div class="lobby-card-lined">
+      <div style="margin-bottom: 30px;">
+        <img src="/logo.png" style="width: 140px; height: auto; margin-top: 20px; margin-bottom: 15px; border-radius: 12px; box-shadow: var(--shadow);">
+        <h1 style="font-size: 2.5rem; margin-bottom: 0px; line-height: 1.1; font-family: 'Gochi Hand', cursive; font-weight: 900;">copyrighted<br>artists</h1>
+      </div>
+      <div style="font-size: 1.8rem; padding-top: 20px;">
+        game starts in <span id="lobby-countdown-timer" style="font-weight: bold; font-size: 2rem;">24</span>
+        <br>seconds
+      </div>
+      <div id="host-controls" class="hidden" style="margin-top: 20px;">
+        <button class="lobby-btn" id="start-btn" style="background:#27ae60;">START GAME</button>
+        
+        <!-- Jukebox Card -->
+        <div id="jukebox-card" class="card" style="margin-top:20px; text-align:left; padding:20px; background:#fff; border:2px solid #000; box-shadow: 4px 4px 0 #000;">
+          <h3 style="margin-bottom:10px; font-size: 1.4rem;">📻 Host Jukebox</h3>
+          <select id="music-select" class="jukebox-select">
+            <option value="/assets/sounds/AXIS1249_01_Crystal Dream_Full.mp3">Crystal Dream</option>
+            <option value="/assets/sounds/AXIS1232_06_Purely Pizzicato_Full.mp3">Purely Pizzicato</option>
+            <option value="/assets/sounds/AXIS1196_08_Tinsel Time_Full.mp3">Tinsel Time</option>
+          </select>
+          <div class="jukebox-controls">
+            <button class="btn btn-sm" id="music-play-btn" style="background:#eee; border:2px solid #000; padding:5px 15px; font-family:'Gochi Hand';">▶️ Play</button>
+            <button class="btn btn-sm" id="music-pause-btn" style="background:#eee; border:2px solid #000; padding:5px 15px; font-family:'Gochi Hand';">⏸️ Pause</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Fun Fact Card Box -->
+    <div class="lobby-card-lined">
+      <h2 style="font-size: 1.8rem; margin-bottom: 15px;">fun fact</h2>
+      <div style="font-size: 1.6rem; padding-top: 15px;">
+        the original version of copyrighted artists took about a week to create
+      </div>
+      <p style="margin-top:20px; font-size: 1.2rem; color: #555;">Server Code: <strong id="room-code-display">------</strong></p>
+      <button class="lobby-btn" id="ready-btn" style="margin-top:20px;">READY UP</button>
+    </div>
+
+    <!-- Right Column (Players) -->
+    <div id="lobby-players-area" style="position: relative; width: 400px; min-height: 400px; display: flex; flex-direction: column; justify-content: center;">
+      <div id="lobby-players-list" style="position: relative; z-index: 10;">
+        <!-- Player bubbles injected here -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ DRAW TRANSITION ═══════════════ -->
+  <div id="view-draw-transition" class="split-screen hidden">
+    <div class="split-left">
+      <svg id="fake-draw-svg" viewBox="0 0 200 200" width="160" height="160">
+        <!-- face outline -->
+        <path class="fd-path fd-d1" d="M 10 100 A 90 90 0 1 1 190 100 A 90 90 0 1 1 10 100" pathLength="800" />
+        <!-- left eye -->
+        <path class="fd-path fd-d2" d="M 60 70 L 60 85" pathLength="800" />
+        <!-- right eye -->
+        <path class="fd-path fd-d3" d="M 140 70 L 140 85" pathLength="800" />
+        <!-- hand on chin -->
+        <path class="fd-path fd-d4" d="M 50 160 Q 80 180 100 140 Q 150 150 110 180 Z" pathLength="800" />
+      </svg>
+    </div>
+    <div class="split-right" id="draw-trans-text">
+      <div style="font-size: 1.5rem; text-transform: uppercase; letter-spacing: 0.2em; margin-bottom: 10px; opacity: 0.6;">next phase</div>
+      <h2 style="font-size: 3rem; margin-bottom: 20px;">original masterpiece</h2>
+      <p>draw the prompt you'll be given. this will be the original drawing.</p>
+      <br>
+      <div class="card card-glow" style="padding: 20px; transform: rotate(1deg);">
+        <p><span class="pts-bold" id="draw-pts-orig-label">100 points</span> for each time you pick the original drawing</p>
+        <p><span class="pts-bold" id="draw-pts-orig-label2">100 points</span> for each artist who picks your original drawing</p>
+      </div>
+    </div>
+    <div id="draw-trans-countdown" class="hidden" style="position: absolute; font-size: 8rem; font-weight: 900; color: #1A1A1A; text-align: center;"></div>
+  </div>
+
+  <!-- ═══════════════ PROMPT REVEAL ═══════════════ -->
+  <div id="view-prompt-reveal" class="hidden">
+    <div class="pr-label">Your prompt:</div>
+    <div id="reveal-prompt-text" class="pr-text"></div>
+    <div id="reveal-cd-num" class="pr-cd">3</div>
+  </div>
+
+  <!-- ═══════════════ DRAWING PHASE ═══════════════ -->
+  <div id="view-drawing" class="hidden">
+    <div id="drawing-prompt-area">
+      <div class="phase-label">draw:</div>
+      <div id="drawing-prompt-text">loading prompt...</div>
+      <div class="hint" id="drawing-hint-text"></div>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:center;">
+      <div class="canvas-toolbar" id="draw-toolbar">
+        <button class="tool-btn color-btn active" style="background:#1A1A1A;" data-color="#1A1A1A"></button>
+        <button class="tool-btn color-btn" style="background:#e74c3c;" data-color="#e74c3c"></button>
+        <button class="tool-btn color-btn" style="background:#3498db;" data-color="#3498db"></button>
+        <button class="tool-btn color-btn" style="background:#27ae60;" data-color="#27ae60"></button>
+        <button class="tool-btn color-btn" style="background:#f1c40f;" data-color="#f1c40f"></button>
+        <div class="tool-divider"></div>
+        <button class="tool-btn tool-eraser" data-color="#ffffff" title="Eraser">🧹</button>
+        <div class="tool-divider"></div>
+        <button class="tool-btn tool-size" data-size="4" title="Small">●</button>
+        <button class="tool-btn tool-size active" data-size="10" title="Medium">●</button>
+        <button class="tool-btn tool-size" data-size="20" title="Large">●</button>
+        <div class="tool-divider"></div>
+        <button class="tool-btn tool-clear" id="draw-clear-btn">CLR ALL</button>
+      </div>
+      <canvas id="drawing-canvas" width="340" height="480"></canvas>
+      <div class="canvas-controls">
+        <button class="canvas-btn" id="drawing-undo-btn">undo</button>
+        <button class="canvas-btn primary" id="drawing-submit-btn">submit</button>
+      </div>
+    </div>
+  </div>
+
+
+
+  <!-- ═══════════════ OBSERVE PHASE ═══════════════ -->
+  <div id="view-observe" class="hidden">
+    <div id="observe-canvas-area">
+      <img id="observe-img" src="" alt="drawing to observe">
+      <div id="observe-text-overlay">
+        <h1 id="observe-main-text">observe the drawing</h1>
+        <p id="observe-sub-text">try to remember as much as possible</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ COPY TRANSITION (High Energy) ═══════════════ -->
+  <div id="view-copy-transition" class="hidden" style="position: fixed; inset: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden;">
+    <!-- Background cleanup: Removed wavy SVG -->
+    
+    <div style="position: relative; z-index: 10; text-align: center;">
+      <h1 id="copy-hurry-text" style="font-size: 8rem; text-transform: uppercase; font-weight: 900; margin: 0; line-height: 0.8; animation: hurryPulse 0.5s infinite alternate;">HURRY!</h1>
+      <p style="font-size: 2.5rem; margin-top: 20px;">copy the drawing from memory!</p>
+      <div id="copy-pts-badge" class="badge badge-amber" style="font-size: 1.5rem; padding: 10px 20px; border-radius: 8px; margin-top: 20px;">
+        <span id="copy-pts-label">50 points</span> per fool fooled
+      </div>
+    </div>
+    
+    <div id="copy-countdown-big" style="position: absolute; bottom: 100px; font-size: 10rem; font-weight: 900; opacity: 0.2;"></div>
+  </div>
+
+  <!-- ═══════════════ COPYING PHASE (blank canvas, from memory) ═══════════════ -->
+  <div id="view-copying" class="hidden">
+    <div style="display:flex;flex-direction:column;align-items:center;">
+      <!-- Canvas Toolbar -->
+      <div class="canvas-toolbar" id="copy-toolbar">
+        <button class="tool-btn color-btn active" style="background:#1A1A1A;" data-color="#1A1A1A"></button>
+        <button class="tool-btn color-btn" style="background:#e74c3c;" data-color="#e74c3c"></button>
+        <button class="tool-btn color-btn" style="background:#3498db;" data-color="#3498db"></button>
+        <button class="tool-btn color-btn" style="background:#27ae60;" data-color="#27ae60"></button>
+        <button class="tool-btn color-btn" style="background:#f1c40f;" data-color="#f1c40f"></button>
+        <div class="tool-divider"></div>
+        <button class="tool-btn tool-eraser" data-color="#ffffff" title="Eraser">🧹</button>
+        <div class="tool-divider"></div>
+        <button class="tool-btn tool-size" data-size="4" title="Small">●</button>
+        <button class="tool-btn tool-size active" data-size="10" title="Medium">●</button>
+        <button class="tool-btn tool-size" data-size="20" title="Large">●</button>
+        <div class="tool-divider"></div>
+        <button class="tool-btn tool-clear" id="copy-clear-btn">CLR ALL</button>
+      </div>
+      <canvas id="copying-canvas" width="340" height="480"></canvas>
+      <div class="canvas-controls">
+        <button class="canvas-btn" id="copying-undo-btn">undo</button>
+        <button class="canvas-btn primary" id="copying-submit-btn">submit</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ WAITING (after submit) ═══════════════ -->
+  <div id="view-waiting" class="transition-screen hidden">
+    <h1 style="font-size:3.5rem;">waiting for others to submit</h1>
+    <p style="font-size:1.5rem; margin-top:20px;">please let our fellow artists finish their masterpieces</p>
+  </div>
+
+  <!-- ═══════════════ VOTE TRANSITION ═══════════════ -->
+  <div id="view-vote-transition" class="transition-screen hidden">
+    <h1>pick the drawing made by the original creator</h1>
+  </div>
+
+  <!-- ═══════════════ VOTING PHASE ═══════════════ -->
+  <div id="view-voting" class="hidden">
+    <div id="voting-prompt-title">loading...</div>
+    <div id="voting-type-label">block drawing</div>
+    <div id="voting-cards"></div>
+  </div>
+
+  <!-- ═══════════════ REVEAL PHASE (shows all with labels) ═══════════════ -->
+  <div id="view-reveal" class="hidden">
+    <div id="reveal-prompt-title">loading...</div>
+    <div id="reveal-type-label">block drawing</div>
+    <div id="reveal-cards"></div>
+  </div>
+
+  <!-- ═══════════════ SCORES CARD ═══════════════ -->
+  <div id="view-scores" class="hidden">
+    <div class="scores-paper">
+      <h2 id="scores-header">scores</h2>
+      <div id="scores-list"></div>
+      <!-- Extra empty rows (Roblox style) -->
+      <div class="score-row empty-row">&nbsp;</div>
+      <div class="score-row empty-row">&nbsp;</div>
+      <div class="score-row empty-row">&nbsp;</div>
+      <div class="score-row empty-row">&nbsp;</div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ ROUND 2 SPLASH ═══════════════ -->
+  <div id="view-round-2" class="hidden">
+    <div class="splash-content">
+      <h1 class="animate-bounce" style="color: #f59e0b; font-size: 5rem;">ROUND 2</h1>
+      <p style="font-size: 2.5rem; color: #fbbf24;">DOUBLE POINTS!</p>
+      <div class="info-card" style="background: rgba(245, 158, 11, 0.1); border-color: #f59e0b;">
+        <p>All points are worth <strong>DOUBLE</strong> this round!</p>
+        <p>Stay sharp and draw with precision.</p>
+      </div>
+      <p class="timer-next">Round starts in: <span id="round-2-timer">5</span></p>
+    </div>
+  </div>
+
+  <!-- ═══════════════ FINAL ROUND SPLASH ═══════════════ -->
+  <div id="view-final-round" class="hidden">
+    <div class="splash-content">
+      <h1 class="animate-bounce" style="color: #3b82f6; font-size: 5rem;">FINAL ROUND</h1>
+      <p style="font-size: 1.5rem; color: #60a5fa;">The Chain of Copies!</p>
+      <div class="info-card" style="background: rgba(59, 130, 246, 0.1); border-color: #3b82f6;">
+        <p>In the grand finale, you will copy <strong>copies</strong> made by others!</p>
+        <p>3 Drawings per set: Original, Copy, and Copy-of-Copy.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ GAME ENDED / FINAL SCORES ═══════════════ -->
+  <div id="view-ended" class="hidden">
+    <div class="scores-paper">
+      <h2>final scores</h2>
+      <div id="final-scores-list"></div>
+      <div class="score-row empty-row">&nbsp;</div>
+      <div class="score-row empty-row">&nbsp;</div>
+      <div class="score-row empty-row">&nbsp;</div>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+  // ══════════════════════════════════════════════
+  //  STATE
+  // ══════════════════════════════════════════════
+  const params = new URLSearchParams(location.search);
+  let roomCode = location.pathname.split('/room/')[1]?.toUpperCase();
+  let myPlayerId = params.get('pid') || localStorage.getItem('pid');
+  let myUsername = params.get('name') || localStorage.getItem('username') || 'Artist';
+
+  const socket = io();
+
+  // ── Audio Helpers ──
+  function playSFX(id) {
+    const el = document.getElementById(`sfx-${id}`);
+    if (el) {
+      el.currentTime = 0;
+      el.play().catch(e => console.warn('Audio blocked:', e));
+    }
+  }
+
+  // Global click sound for buttons
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('button') || e.target.closest('.btn') || e.target.closest('.lobby-btn')) {
+      playSFX('click');
+    }
+  });
+
+  const musicEl = document.getElementById('bg-music');
+  socket.on('music-update', ({ currentMusic, musicPlaying }) => {
+    console.log('🎵 Music update:', currentMusic.name, musicPlaying);
+    if (musicEl.src !== window.location.origin + currentMusic.url) {
+      musicEl.src = currentMusic.url;
+    }
+    if (musicPlaying) {
+      musicEl.play().catch(e => console.warn('Music play blocked:', e));
+    } else {
+      musicEl.pause();
+    }
+    // Update Jukebox select for host
+    const select = document.getElementById('music-select');
+    if (select) select.value = currentMusic.url;
+  });
+
+  let timerInterval = null;
+  let timerSeconds = 0;
+  let timerTotal = 0;
+  let currentPhase = 'lobby';
+  let currentGallery = null;
+  let currentGalleryIndex = 0; // which prompt set we're voting on
+  let myVotes = {};  // originalOwnerId → chosenPlayerId
+  let allPlayers = [];
+  let playerStatusMap = {};
+  let drawingStrokeHistory = [];  // for undo
+  let copyingStrokeHistory = [];
+  let currentInk = 100;
+
+  function updateInkBottle(pct) {
+    const fill = document.querySelector('.ink-bottle-fill');
+    if (fill) fill.style.height = pct + '%';
+  }
+
+  // ── Canvas refs ──
+  const drawCanvas = document.getElementById('drawing-canvas');
+  const drawCtx = drawCanvas.getContext('2d');
+  const copyCanvas = document.getElementById('copying-canvas');
+  const copyCtx = copyCanvas.getContext('2d');
+
+  // ══════════════════════════════════════════════
+  //  VIEWS
+  // ══════════════════════════════════════════════
+  const ALL_VIEWS = [
+    'view-lobby','view-draw-transition','view-prompt-reveal','view-drawing',
+    'view-waiting','view-observe','view-copy-transition',
+    'view-copying','view-vote-transition','view-voting',
+    'view-reveal','view-scores','view-final-round','view-ended'
+  ];
+
+  function showView(id) {
+    ALL_VIEWS.forEach(v => document.getElementById(v).classList.add('hidden'));
+    document.getElementById(id).classList.remove('hidden');
+    currentPhase = id;
+  }
+
+  // ══════════════════════════════════════════════
+  //  TIMER / INK BAR
+  // ══════════════════════════════════════════════
+  function startTimer(seconds, text) {
+    clearInterval(timerInterval);
+    timerSeconds = seconds;
+    timerTotal = seconds;
+    
+    const barContainer = document.getElementById('ink-bar-container');
+    const barText = document.getElementById('ink-bar-text');
+    const barFill = document.getElementById('ink-bar-fill');
+    const well = document.getElementById('global-timer-well');
+    const wellText = document.getElementById('global-timer-text');
+
+    if (barContainer) barContainer.classList.remove('hidden');
+    if (barText) barText.textContent = text;
+    if (well) {
+      well.classList.remove('hidden');
+      well.classList.remove('hurry');
+    }
+
+    timerInterval = setInterval(() => {
+      timerSeconds--;
+      if (barFill) {
+        const pct = (timerSeconds / timerTotal) * 100;
+        barFill.style.width = pct + '%';
+      }
+      if (wellText) wellText.textContent = timerSeconds < 10 ? '0' + timerSeconds : timerSeconds;
+      
+      if (timerSeconds <= 5 && well) well.classList.add('hurry');
+
+      if (timerSeconds <= 0) {
+        clearInterval(timerInterval);
+        if (barContainer) barContainer.classList.add('hidden');
+        if (well) well.classList.add('hidden');
+      }
+    }, 1000);
+  }
+
+  function stopTimer() {
+    clearInterval(timerInterval);
+    const bar = document.getElementById('ink-bar-container');
+    const well = document.getElementById('global-timer-well');
+    if (bar) bar.classList.add('hidden');
+    if (well) well.classList.add('hidden');
+  }
+
+  // ═══════════════════════════  // ══════════════════════════════════════════════
+  //  CANVAS DRAWING (with tools)
+  // ══════════════════════════════════════════════
+  function setupCanvas(canvas, ctx, historyArr, toolbarId) {
+    let drawing = false;
+    let currentPath = [];
+    let currentColor = '#1A1A1A';
+    let currentSize = 10;
+
+    const tb = document.getElementById(toolbarId);
+    if (tb) {
+      // Color buttons & Eraser
+      const colorBtns = tb.querySelectorAll('.color-btn, .tool-eraser');
+      colorBtns.forEach(btn => {
+        btn.onclick = () => {
+          colorBtns.forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          currentColor = btn.dataset.color;
+        };
+      });
+      // Size buttons
+      const sizeBtns = tb.querySelectorAll('.tool-size');
+      sizeBtns.forEach(btn => {
+        btn.onclick = () => {
+          sizeBtns.forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          currentSize = parseInt(btn.dataset.size, 10);
+        };
+      });
+      // Clear button
+      const clearBtn = tb.querySelector('.tool-clear');
+      if (clearBtn) {
+        clearBtn.onclick = () => {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          historyArr.push({ type: 'clear' });
+        };
+      }
+    }
+
+    function getPos(e) {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      return [(clientX - rect.left) * scaleX, (clientY - rect.top) * scaleY];
+    }
+
+    function startStroke(e) {
+      drawing = true;
+      currentPath = { points: [], color: currentColor, size: currentSize };
+      ctx.beginPath();
+      ctx.strokeStyle = currentColor;
+      ctx.lineWidth = currentSize;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      const [x, y] = getPos(e);
+      ctx.moveTo(x, y);
+      currentPath.points.push([x, y]);
+      e.preventDefault();
+    }
+
+    function doStroke(e) {
+      if (!drawing) return;
+      if (currentInk <= 0) return;
+      
+      const [nx, ny] = getPos(e);
+      const prev = currentPath.points[currentPath.points.length - 1];
+      if (prev) {
+        const dx = nx - prev[0];
+        const dy = ny - prev[1];
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        currentInk -= dist * 0.04; // Adjust 0.04 for more/less ink
+        if (currentInk < 0) currentInk = 0;
+        updateInkBottle(currentInk);
+      }
+
+      ctx.lineTo(nx, ny);
+      ctx.stroke();
+      currentPath.points.push([nx, ny]);
+      e.preventDefault();
+    }
+
+    function endStroke(e) {
+      if (!drawing) return;
+      drawing = false;
+      if (currentPath.points.length > 0) historyArr.push({...currentPath});
+      e.preventDefault();
+    }
+
+    canvas.addEventListener('mousedown', startStroke);
+    canvas.addEventListener('mousemove', doStroke);
+    canvas.addEventListener('mouseup', endStroke);
+    canvas.addEventListener('touchstart', startStroke, { passive: false });
+    canvas.addEventListener('touchmove', doStroke, { passive: false });
+    canvas.addEventListener('touchend', endStroke, { passive: false });
+  }
+
+  function undoCanvas(canvas, ctx, historyArr) {
+    historyArr.pop();
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    historyArr.forEach(stroke => {
+      if (stroke.type === 'clear') {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        return;
+      }
+      ctx.beginPath();
+      ctx.strokeStyle = stroke.color;
+      ctx.lineWidth = stroke.size;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      stroke.points.forEach((pt, i) => i === 0 ? ctx.moveTo(pt[0], pt[1]) : ctx.lineTo(pt[0], pt[1]));
+      ctx.stroke();
+    });
+  }
+
+  setupCanvas(drawCanvas, drawCtx, drawingStrokeHistory, 'draw-toolbar');
+  setupCanvas(copyCanvas, copyCtx, copyingStrokeHistory, 'copy-toolbar');
+
+  document.getElementById('drawing-undo-btn').onclick = () => undoCanvas(drawCanvas, drawCtx, drawingStrokeHistory);
+  document.getElementById('copying-undo-btn').onclick = () => undoCanvas(copyCanvas, copyCtx, copyingStrokeHistory);
+
+  // ══════════════════════════════════════════════
+  //  VOTES / GALLERY STATE
+  // ══════════════════════════════════════════════
+  // We vote on one prompt at a time (currentGalleryIndex)
+  // After voting on all, we send all votes
+
+  function buildVotingUI(set, participants) {
+    if (!set) return;
+    
+    // participants is array of playerIds in this set (original + copy)
+    const isMySet = participants && participants.includes(myPlayerId);
+    
+    document.getElementById('voting-prompt-title').textContent = set.prompt;
+    
+    const container = document.getElementById('voting-cards');
+    container.innerHTML = '';
+
+    if (isMySet) {
+      const msg = document.createElement('div');
+      msg.className = 'voting-participation-notice';
+      msg.textContent = "You participated in this set. You can see the drawings but cannot vote.";
+      msg.style.cssText = "grid-column: 1/-1; text-align: center; font-size: 1.2rem; background: rgba(0,0,0,0.05); padding: 10px; border-radius: 8px; margin-bottom: 20px; font-weight: 700;";
+      container.appendChild(msg);
+    }
+
+    if (set.entries.length > 2) {
+      container.style.gridTemplateColumns = 'repeat(3, 1fr)';
+      container.style.maxWidth = '1000px';
+    } else {
+      container.style.gridTemplateColumns = 'repeat(2, 1fr)';
+      container.style.maxWidth = '800px';
+    }
+
+    set.entries.forEach(entry => {
+      const card = document.createElement('div');
+      card.className = 'vote-card';
+      if (isMySet) card.classList.add('disabled-card');
+      card.dataset.playerId = entry.playerId;
+
+      const img = document.createElement('img');
+      img.className = 'vote-card-img';
+      img.src = entry.dataUrl || '';
+      img.alt = 'drawing';
+      card.appendChild(img);
+
+      const lbl = document.createElement('div');
+      lbl.className = 'vote-card-label';
+      lbl.textContent = isMySet ? 'view only' : 'pick me!';
+      card.appendChild(lbl);
+
+      if (!isMySet) {
+        card.onclick = () => {
+          // Visual feedback
+          container.querySelectorAll('.vote-selection-badge').forEach(b => b.remove());
+          const myBadge = document.createElement('div');
+          myBadge.className = 'vote-selection-badge';
+          myBadge.textContent = myUsername || 'You';
+          card.appendChild(myBadge);
+
+          container.querySelectorAll('.vote-card-img').forEach(i => i.classList.remove('selected'));
+          img.classList.add('selected');
+          
+          // Emit single vote for this set
+          const voteChoice = {};
+          voteChoice[set.originalOwnerId] = entry.playerId;
+          socket.emit('submit-vote', { roomCode, playerId: myPlayerId, choices: voteChoice });
+          
+          // Show brief wait
+          toast("Vote submitted! Waiting for others...");
+        };
+      }
+
+      container.appendChild(card);
+    });
+  }
+
+  function buildRevealUI(set, results) {
+    if (!set) return;
+    const revealContainer = document.getElementById('reveal-cards');
+    revealContainer.innerHTML = '';
+
+    document.getElementById('reveal-prompt-title').textContent = set.prompt;
+
+    const voterMap = {}; // playerId → [voterNames]
+    if (results && results.voterChoices) {
+      results.voterChoices.forEach(vc => {
+        if (!voterMap[vc.chosenPlayerId]) voterMap[vc.chosenPlayerId] = [];
+        voterMap[vc.chosenPlayerId].push(vc.voterName);
+      });
+    }
+
+    set.entries.forEach(entry => {
+      const card = document.createElement('div');
+      card.className = 'reveal-card polaroid';
+      if (entry.playerId === set.originalOwnerId) card.classList.add('original-card');
+
+      // Voter Badges
+      const voterRow = document.createElement('div');
+      voterRow.className = 'reveal-voter-row';
+      (voterMap[entry.playerId] || []).forEach(name => {
+        const b = document.createElement('div');
+        b.className = 'reveal-voter-badge-box';
+        b.textContent = name;
+        voterRow.appendChild(b);
+      });
+      card.appendChild(voterRow);
+
+      // Header
+      const header = document.createElement('div');
+      header.className = 'reveal-card-header';
+      header.textContent = entry.playerId === set.originalOwnerId ? 'ORIGINAL' : 'COPY';
+      card.appendChild(header);
+
+      // Image
+      const img = document.createElement('img');
+      img.className = 'reveal-card-img';
+      img.src = entry.dataUrl || '';
+      card.appendChild(img);
+
+      // Add Stamp
+      const stamp = document.createElement('div');
+      stamp.className = 'reveal-stamp ' + (entry.isOriginal ? 'original' : 'copy');
+      if (entry.type === 'copy2') {
+        stamp.textContent = 'Copy of Copy';
+        stamp.style.fontSize = '0.8rem';
+      } else {
+        stamp.textContent = entry.isOriginal ? 'Original' : 'Copy';
+      }
+      card.appendChild(stamp);
+
+      // Footer (Artist Name)
+      const footer = document.createElement('div');
+      footer.className = 'reveal-card-footer';
+      footer.textContent = `by ${entry.username || 'Artist'}`;
+      card.appendChild(footer);
+
+      revealContainer.appendChild(card);
+    });
+  }
+
+  // ══════════════════════════════════════════════
+  //  SCORES UI
+  // ══════════════════════════════════════════════
+  function buildScoresUI(players, isFinal, roundNum) {
+    document.getElementById('scores-header').textContent = isFinal ? 'final scores' : `round ${roundNum || 1} results`;
+    const list = document.getElementById('scores-list');
+    
+    // We want to animate the transition from PREVIOUS scores to NEW scores.
+    // So we'll first render with OLD scores, then animate to NEW.
+    const oldPlayers = [...allPlayers].sort((a,b) => (b.score || 0) - (a.score || 0));
+    
+    list.innerHTML = '';
+    list.style.position = 'relative';
+    list.style.height = (players.length * 45) + 'px'; // assume 45px per row
+
+    const rowMap = new Map();
+    
+    // Create rows in their OLD positions/scores first
+    players.forEach((p, index) => {
+      const row = document.createElement('div');
+      row.className = 'score-row' + (p.id === myPlayerId ? ' me-row' : '');
+      row.setAttribute('data-pid', p.id);
+      row.style.position = 'absolute';
+      row.style.width = '100%';
+      row.style.transition = 'all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)';
+      
+      const oldP = allPlayers.find(op => op.id === p.id) || { score: 0 };
+      const oldRank = oldPlayers.findIndex(op => op.id === p.id);
+      const initialRank = oldRank === -1 ? index : oldRank;
+      
+      row.style.top = (initialRank * 45) + 'px';
+
+      const nameEl = document.createElement('div');
+      nameEl.className = 'score-row-bullet';
+      nameEl.innerHTML = `<span>•</span><span>${p.username}</span>`;
+      
+      const scoreEl = document.createElement('div');
+      scoreEl.className = 'score-val-animate';
+      scoreEl.textContent = oldP.score || 0;
+      
+      row.appendChild(nameEl);
+      row.appendChild(scoreEl);
+      list.appendChild(row);
+      rowMap.set(p.id, { row, scoreEl });
+    });
+
+    // After a short delay, animate to NEW positions and NEW scores
+    setTimeout(() => {
+      const sortedNew = [...players].sort((a,b) => (b.score || 0) - (a.score || 0));
+      sortedNew.forEach((p, newRank) => {
+        const entry = rowMap.get(p.id);
+        if (entry) {
+          entry.row.style.top = (newRank * 45) + 'px';
+          const oldP = allPlayers.find(op => op.id === p.id) || { score: 0 };
+          if (p.score > oldP.score) {
+            animateValue(entry.scoreEl, oldP.score, p.score, 1500);
+          } else {
+            entry.scoreEl.textContent = p.score || 0;
+          }
+        }
+      });
+      // Important: Update allPlayers AFTER starting the animation logic
+      allPlayers = players;
+    }, 500);
+  }
+
+  function buildFinalScoresUI(players) {
+    const list = document.getElementById('final-scores-list');
+    list.innerHTML = '';
+    players.forEach(p => {
+      const row = document.createElement('div');
+      row.className = 'score-row' + (p.id === myPlayerId ? ' me-row' : '');
+      const nameEl = document.createElement('div');
+      nameEl.className = 'score-row-bullet';
+      nameEl.innerHTML = `<span>•</span><span>${p.username}</span>`;
+      const scoreEl = document.createElement('div');
+      scoreEl.textContent = p.score || 0;
+      row.appendChild(nameEl);
+      row.appendChild(scoreEl);
+      list.appendChild(row);
+    });
+  }
+
+  function renderPlayersPanel(players) {
+    console.log('👥 Rendering players:', players.length);
+    
+    // Check for score changes for popup before updating allPlayers
+    if (allPlayers.length > 0) {
+      players.forEach(p => {
+        const old = allPlayers.find(oldP => oldP.id === p.id);
+        if (old && p.score > old.score) {
+          showScorePopup(p.id, p.score - old.score);
+        }
+      });
+    }
+    allPlayers = players;
+    
+    // 1. Lobby Starburst List
+    const lobbyList = document.getElementById('lobby-players-list');
+    if (lobbyList) {
+      lobbyList.innerHTML = '';
+      players.forEach((p, i) => {
+        const bubble = document.createElement('div');
+        bubble.className = 'lobby-player-bubble';
+        bubble.setAttribute('data-pid', p.id);
+        if (p.id === myPlayerId) bubble.classList.add('me-bubble');
+        
+        const isH = p.isHost || p.is_host;
+        bubble.innerHTML = `${isH ? '👑 ' : ''}${p.username}${p.id === myPlayerId ? ' (you)' : ''}`;
+        
+        const rot = (i % 2 === 0 ? 1 : -1) * (Math.random() * 5);
+        bubble.style.transform = `rotate(${rot}deg)`;
+        lobbyList.appendChild(bubble);
+      });
+    }
+
+    // 2. Sidebar Panel List (Roblox style)
+    const panelList = document.getElementById('players-panel-list');
+    if (panelList) {
+      panelList.innerHTML = '';
+      players.forEach(p => {
+        const row = document.createElement('div');
+        row.className = 'panel-player-name' + (p.id === myPlayerId ? ' me' : '');
+        row.setAttribute('data-pid', p.id);
+        
+        const isH = p.isHost || p.is_host;
+        row.innerHTML = `
+          <span>${isH ? '👑 ' : ''}${p.username}${p.id === myPlayerId ? ' (you)' : ''}</span>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span class="panel-score-val" data-pid="${p.id}" style="font-size:0.9rem; color:#ffd700; font-weight:900;">${p.score || 0}</span>
+            <span class="panel-status ${playerStatusMap[p.id]?.toLowerCase() === 'done' ? 'done' : ''}">
+              ${playerStatusMap[p.id] || ''}
+            </span>
+          </div>
+        `;
+        panelList.appendChild(row);
+      });
+
+      // Sidebar point count-up
+      players.forEach(p => {
+        const scoreEl = panelList.querySelector(`.panel-score-val[data-pid="${p.id}"]`);
+        if (scoreEl) {
+          const old = allPlayers.find(oldP => oldP.id === p.id);
+          if (old && p.score > old.score) {
+            animateValue(scoreEl, old.score, p.score, 1000);
+          }
+        }
+      });
+    }
+  }
+
+  function animateValue(obj, start, end, duration) {
+    let startTimestamp = null;
+    const step = (timestamp) => {
+      if (!startTimestamp) startTimestamp = timestamp;
+      const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+      obj.innerHTML = Math.floor(progress * (end - start) + start);
+      if (progress < 1) {
+        window.requestAnimationFrame(step);
+      } else {
+        obj.innerHTML = end; 
+      }
+    };
+    window.requestAnimationFrame(step);
+  }
+
+  function checkHostControls(playersOrRoom) {
+    if (!playersOrRoom) return;
+    const players = Array.isArray(playersOrRoom) ? playersOrRoom : playersOrRoom.players;
+    if (!players) return;
+
+    const me = players.find(p => p.id === myPlayerId);
+    console.log('🧐 Host check: myPlayerId =', myPlayerId);
+    console.log('🧐 Host check: found me =', me);
+    if (me) console.log('🧐 Host check: me.is_host =', me.is_host, 'me.isHost =', me.isHost);
+
+    const isHost = me && (me.isHost || me.is_host);
+    const hostCtrls = document.getElementById('host-controls');
+    const readyBtn = document.getElementById('ready-btn');
+
+    if (isHost) {
+      console.log('👑 UI: Showing Host Controls');
+      hostCtrls.classList.remove('hidden');
+      readyBtn.textContent = 'HOST';
+      readyBtn.disabled = true;
+      readyBtn.style.background = '#1A1A1A';
+      readyBtn.style.color = '#fff';
+    } else {
+      console.log('👤 UI: Showing Player Controls');
+      hostCtrls.classList.add('hidden');
+      readyBtn.textContent = 'READY UP';
+      readyBtn.disabled = false;
+      readyBtn.style.background = '#27ae60';
+      readyBtn.style.color = '#fff';
+    }
+  }
+
+  // ══════════════════════════════════════════════
+  //  SOCKET EVENTS
+  // ══════════════════════════════════════════════
+
+  socket.on('room-joined', ({ roomCode: rc, playerId, room }) => {
+    roomCode = rc;
+    myPlayerId = playerId;
+    localStorage.setItem('pid', playerId);
+    localStorage.setItem('roomCode', rc);
+    localStorage.setItem('username', myUsername);
+    document.getElementById('room-code-display').textContent = rc;
+    showView('view-lobby');
+
+    if (room && room.players) renderPlayersPanel(room.players);
+    checkHostControls(room);
+  });
+
+  socket.on('player-list', (players) => {
+    console.log('📡 player-list received:', players.length, 'players');
+    renderPlayersPanel(players);
+    checkHostControls(players);
+  });
+
+  socket.on('error', ({ message }) => toast('❌ ' + message));
+
+  socket.on('rejoin-failed', ({ roomCode }) => {
+    console.warn(`⚠️ Rejoin failed for ${roomCode}, joining as fresh player.`);
+    const name = myUsername || 'Artist';
+    socket.emit('join-room', { roomCode, username: name });
+  });
+
+  socket.on('player-status', ({ playerId, status }) => {
+    playerStatusMap[playerId] = status;
+    renderPlayersPanel(allPlayers);
+  });
+
+  socket.on('phase-change', (data) => {
+    const { phase, duration, round, totalRounds, pointsBase } = data;
+
+    // reset HUD statuses
+    if (phase !== 'results' && phase !== 'ended') {
+      playerStatusMap = {};
+      allPlayers.forEach(p => playerStatusMap[p.id] = (phase === 'drawing' || phase === 'copying' || phase === 'voting') ? (phase === 'voting' ? 'Voting...' : 'Drawing...') : '');
+      renderPlayersPanel(allPlayers);
+    }
+
+    switch (phase) {
+      case 'round-start':
+        showView('view-round-2');
+        audioManager.play('start');
+        startCountdown(data.duration || 5, 'round-2-timer');
+        break;
+
+      case 'drawing': {
+        autoSubDrawing = false;
+        const pts = pointsBase || 100;
+        document.getElementById('draw-pts-orig-label').textContent = pts + ' points';
+        document.getElementById('draw-pts-orig-label2').textContent = pts + ' points';
+        
+        // Reset Fake Drawing Animation
+        const fakeSvg = document.getElementById('fake-draw-svg');
+        if (fakeSvg) {
+          fakeSvg.style.animation = 'none';
+          fakeSvg.offsetHeight; // trigger reflow
+          fakeSvg.style.animation = null;
+          // reset inner paths
+          fakeSvg.querySelectorAll('.fd-path').forEach(p => {
+            p.style.animation = 'none';
+            p.offsetHeight;
+            p.style.animation = null;
+          });
+        }
+
+        document.getElementById('draw-trans-text').style.display = 'flex';
+        fakeSvg.style.display = 'block';
+        document.getElementById('draw-trans-countdown').classList.add('hidden');
+        showView('view-draw-transition');
+        
+        // 5-second timer for Knowledge Phase
+        startTimer(5, 'game starts in...');
+
+        setTimeout(() => {
+           const promptText = document.getElementById('drawing-prompt-text').textContent;
+           document.getElementById('reveal-prompt-text').textContent = '"' + promptText + '"';
+           document.getElementById('reveal-cd-num').textContent = '3';
+           showView('view-prompt-reveal');
+           
+           let count = 3;
+           const intv = setInterval(() => {
+             count--;
+             if (count > 0) {
+               document.getElementById('reveal-cd-num').textContent = count;
+             } else {
+               clearInterval(intv);
+               drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+               drawingStrokeHistory.length = 0;
+               document.getElementById('drawing-submit-btn').disabled = false;
+               document.getElementById('drawing-submit-btn').textContent = 'submit';
+               showView('view-drawing');
+               startTimer(duration || 90, 'draw the prompt');
+             }
+           }, 1000);
+        }, 5000); // 5 second transition
+        break;
+      }
+
+      case 'observe': {
+        const area = document.getElementById('observe-canvas-area');
+        area.classList.remove('obs-hidden-overlay');
+        
+        const roundNum = round || 1;
+        const totalR = totalRounds || 3;
+        const isFinal = roundNum >= totalR;
+        const isL2 = data.isLayered && data.stage === 2;
+        
+        document.getElementById('observe-main-text').textContent = isL2 ? 'now copy the copy' : (isFinal ? 'final round: observe' : (roundNum > 1 ? 'observe again' : 'observe the drawing'));
+        document.getElementById('observe-sub-text').textContent = isL2 ? 'you are observing a copy made by another player' : (isFinal ? 'this is the grand finale! remember it well!' : (roundNum > 1 ? `round ${roundNum}: remember it well!` : 'try to remember as much as possible'));
+        
+        showView('view-observe');
+        startTimer(duration || 10, '');
+        
+        // After 2.5s, hide the overlay to let them see the drawing clearly
+        setTimeout(() => {
+          area.classList.add('obs-hidden-overlay');
+        }, 2500);
+        
+        // After observe, show copy transition (HURRY!)
+        setTimeout(() => {
+          const transView = document.getElementById('view-copy-transition');
+          const countdownEl = document.getElementById('copy-countdown-big');
+          const copyPts = (pointsBase || 100) / 2;
+          
+          document.getElementById('copy-pts-label').textContent = copyPts + ' points';
+          showView('view-copy-transition');
+          stopTimer();
+
+          // 3-second countdown
+          let count = 3;
+          countdownEl.textContent = count;
+          const intv = setInterval(() => {
+            count--;
+            if (count > 0) {
+              countdownEl.textContent = count;
+            } else {
+              clearInterval(intv);
+              // Switch to canvas
+              copyCtx.clearRect(0, 0, copyCanvas.width, copyCanvas.height);
+              copyingStrokeHistory.length = 0;
+              currentInk = 100;
+              updateInkBottle(100);
+              document.getElementById('copying-submit-btn').disabled = false;
+              document.getElementById('copying-submit-btn').textContent = 'submit';
+              showView('view-copying');
+              startTimer(90, 'copy the drawing');
+            }
+          }, 800);
+        }, (duration || 10) * 1000);
+        break;
+      }
+
+      case 'copying': {
+        autoSubCopy = false;
+        // Fallback: if we get copying directly
+        if (currentPhase !== 'view-copying') {
+          copyCtx.clearRect(0, 0, copyCanvas.width, copyCanvas.height);
+          copyingStrokeHistory.length = 0;
+          document.getElementById('copying-submit-btn').disabled = false;
+          showView('view-copying');
+          startTimer(duration || 90, 'copy the drawing');
+        }
+        break;
+      }
+
+      case 'vote_set': {
+        const { set, duration, participants } = data;
+        stopTimer();
+        showView('view-voting');
+        buildVotingUI(set, participants);
+        startTimer(duration || 20, 'pick the drawing made by the original creator');
+        break;
+      }
+
+      case 'reveal_set': {
+        const { set, results, duration, players: updatedPlayers } = data;
+        stopTimer();
+        showView('view-reveal');
+        buildRevealUI(set, results);
+        startTimer(duration || 8, 'look at the results!');
+        // Keep scoreboard updated in background
+        if (updatedPlayers) {
+          // Just update our local players list if needed (optional)
+        }
+        break;
+      }
+
+      case 'results': {
+        const { players: updatedPlayers, round: r, totalRounds: tr } = data;
+        stopTimer();
+        const isF = (r >= (tr || 3));
+        buildScoresUI(updatedPlayers || [], isF, r);
+        showView('view-scores');
+        startTimer(15, 'next round starting soon');
+        break;
+      }
+
+      case 'final-round': {
+        stopTimer();
+        showView('view-final-round');
+        audioManager.play('start');
+        break;
+      }
+
+      case 'ended': {
+        const { players: finalPlayers } = data;
+        stopTimer();
+        buildFinalScoresUI(finalPlayers || []);
+        showView('view-ended');
+        break;
+      }
+    }
+  });
+
+  socket.on('your-prompt', ({ prompt }) => {
+    document.getElementById('drawing-prompt-text').textContent = prompt;
+  });
+
+  socket.on('sync-state', ({ phase, round, prompt, dataUrl, gallery }) => {
+    console.log(`🔄 Sync State: phase=${phase}, round=${round}`);
+    if (prompt) document.getElementById('drawing-prompt-text').textContent = prompt;
+    // Handle page reload mid-game
+    if (phase === 'drawing') showView('view-drawing');
+    else if (phase === 'observe') showView('view-observe');
+    else if (phase === 'copying') showView('view-copying');
+    else if (phase === 'results') {
+       // if we reloaded during results, we might need to trigger buildRevealUI
+       // but typically results only last 15s, so we might just wait for phase-change
+    }
+    else if (phase === 'voting' && gallery) {
+      currentGallery = gallery;
+      currentGalleryIndex = 0;
+      myVotes = {};
+      showView('view-voting');
+      // For sync, we might not have the specific set info easily, 
+      // but the server will likely emit a vote_set phase change shortly after sync.
+      // If we are in 'voting' phase, we probably just started.
+      if (gallery[0]) buildVotingUI(gallery[0], gallery[0].entries.map(e => e.playerId));
+    }
+    else if (phase === 'vote_set' && data.set) {
+       showView('view-voting');
+       buildVotingUI(data.set, data.participants);
+    }
+    else if (phase === 'lobby' || !phase) showView('view-lobby');
+  });
+
+  // ══════════════════════════════════════════════
+  //  BUTTONS
+  // ══════════════════════════════════════════════
+  document.getElementById('start-btn').onclick = () => {
+    socket.emit('start-game', { roomCode, playerId: myPlayerId });
+  };
+
+  document.getElementById('ready-btn').onclick = () => {
+    socket.emit('ready-up', { roomCode, playerId: myPlayerId });
+    document.getElementById('ready-btn').disabled = true;
+    document.getElementById('ready-btn').textContent = 'Waiting...';
+  };
+
+  document.getElementById('drawing-submit-btn').onclick = () => {
+    const dataUrl = drawCanvas.toDataURL('image/png');
+    socket.emit('submit-drawing', { roomCode, playerId: myPlayerId, dataUrl });
+    document.getElementById('drawing-submit-btn').disabled = true;
+    document.getElementById('drawing-submit-btn').textContent = 'submitted!';
+    stopTimer();
+    showView('view-waiting');
+  };
+
+  document.getElementById('copying-submit-btn').onclick = () => {
+    const dataUrl = copyCanvas.toDataURL('image/png');
+    socket.emit('submit-copy', { roomCode, playerId: myPlayerId, dataUrl });
+    document.getElementById('copying-submit-btn').disabled = true;
+    document.getElementById('copying-submit-btn').textContent = 'submitted!';
+    stopTimer();
+    showView('view-waiting');
+  };
+
+  // ══════════════════════════════════════════════
+  //  INIT
+  // ══════════════════════════════════════════════
+  // Join or rejoin
+  
+  // Players Panel Toggle
+  const panelToggle = document.getElementById('players-panel-toggle');
+  const panel = document.getElementById('players-panel');
+  if (panelToggle && panel) {
+    panelToggle.onclick = () => {
+      panel.classList.toggle('minimized');
+      panelToggle.textContent = panel.classList.contains('minimized') ? '➕' : '➖';
+    };
+  }
+
+  function showScorePopup(playerId, diff) {
+    const row = document.querySelector(`.player-row[data-pid="${playerId}"]`);
+    if (!row) return;
+    const popup = document.createElement('div');
+    popup.className = 'score-popup';
+    popup.textContent = '+' + diff;
+    row.appendChild(popup);
+    setTimeout(() => popup.remove(), 2000);
+  }
+
+  // Jukebox Host Controls
+  const musicSelect = document.getElementById('music-select');
+  const playBtn = document.getElementById('music-play-btn');
+  const pauseBtn = document.getElementById('music-pause-btn');
+
+  if (musicSelect) {
+    musicSelect.onchange = () => {
+      const idx = musicSelect.selectedIndex;
+      socket.emit('change-music', { roomCode, playerId: myPlayerId, musicIndex: idx });
+    };
+  }
+  if (playBtn) {
+    playBtn.onclick = () => socket.emit('toggle-music', { roomCode, playerId: myPlayerId, playing: true });
+  }
+  if (pauseBtn) {
+    pauseBtn.onclick = () => socket.emit('toggle-music', { roomCode, playerId: myPlayerId, playing: false });
+  }
+
+  socket.on('connect', () => {
+    console.log(`🔌 Connected to server as ${socket.id}`);
+    if (roomCode && myPlayerId) {
+      console.log(`🔄 Attempting to rejoin ${roomCode} with PID ${myPlayerId}`);
+      socket.emit('rejoin', { roomCode, playerId: myPlayerId });
+      showView('view-lobby');
+    } else if (roomCode) {
+      console.log(`👤 Joining ${roomCode} as fresh player`);
+      const name = myUsername || 'Artist';
+      socket.emit('join-room', { roomCode, username: name });
+    }
+  });
+
+  socket.on('disconnect', () => {
+    console.warn('🔌 Disconnected from server');
+  });
+
+  // Auto timer-out: if timer hits 0 and still in drawing, auto-submit
+  let autoSubDrawing = false;
+  let autoSubCopy = false;
+  setInterval(() => {
+    if (timerSeconds <= 0) {
+      if (currentPhase === 'view-drawing' && !autoSubDrawing) {
+        autoSubDrawing = true;
+        document.getElementById('drawing-submit-btn').click();
+      }
+      if (currentPhase === 'view-copying' && !autoSubCopy) {
+        autoSubCopy = true;
+        document.getElementById('copying-submit-btn').click();
+      }
+    }
+  }, 1000);
+  </script>
+</body>
+</html>

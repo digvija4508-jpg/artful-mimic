@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lobby — Copyright Artist</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎨</text></svg>">
+</head>
+<body class="lobby-page">
+  <div id="toast-container"></div>
+
+  <div class="lobby-layout">
+    <!-- MAIN AREA -->
+    <div class="lobby-main">
+
+      <!-- Header -->
+      <div class="paper-card lobby-header" style="background: #fff; padding: 20px 30px; margin-bottom: 24px; transform: rotate(-0.5deg);">
+        <div style="display:flex; align-items: center; justify-content: space-between; width: 100%;">
+          <div>
+            <a href="/" class="btn btn-ghost btn-sm" style="margin-bottom:8px;">← Home</a>
+            <div class="room-code-block" style="display:flex;flex-direction:column;gap:2px;">
+              <span class="room-code-label" style="font-family: 'Gochi Hand'; font-weight: 800; font-size: 0.8rem;">ROOM CODE</span>
+              <span class="room-code-value" id="room-code-display" style="font-size: 2.2rem; font-weight: 900;">------</span>
+            </div>
+          </div>
+          <div style="text-align: right;">
+            <span class="badge badge-purple" id="round-badge" style="padding: 10px 20px; font-size: 1.1rem;">3 Rounds</span>
+          </div>
+        </div>
+        <div style="margin-top: 15px; border-top: 1px dashed rgba(0,0,0,0.1); padding-top: 10px;">
+          <div class="invite-row" style="display:flex; align-items:center; gap: 10px;">
+            <div class="invite-link" id="invite-link" style="font-family: 'Gochi Hand'; font-size: 0.85rem; color: #666; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Loading...</div>
+            <button class="btn btn-ghost btn-sm" id="copy-link-btn" title="Copy invite link">📋 Copy</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Players Grid -->
+      <div class="paper-card" style="padding:40px 30px; transform: rotate(1deg);">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;padding:0 8px;">
+          <h2 style="font-size:1.8rem; font-family: 'Gochi Hand';">Players <span id="player-count" style="color:var(--text-muted);font-size:1.1rem;"></span></h2>
+          <span style="font-size:0.95rem;color:var(--text-muted); font-family: 'Gochi Hand';">⏳ Waiting for everyone to ready up…</span>
+        </div>
+        <div class="players-grid" id="players-grid">
+          <!-- filled by JS -->
+        </div>
+        <div style="padding:15px;margin-top:20px; border-top: 1px dashed rgba(0,0,0,0.1);" id="min-player-note">
+          <p style="font-size:1rem;color:var(--text-muted);text-align:center; font-family: 'Gochi Hand';">⚠️ Need at least 2 players to start</p>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="lobby-actions">
+        <button class="btn btn-ghost btn-lg w-full" id="ready-btn" style="display:none;">
+          ✅ Ready Up
+        </button>
+        <button class="btn btn-primary btn-lg w-full" id="start-btn" style="display:none;">
+          🚀 Start Game
+        </button>
+        <p id="not-ready-note" style="text-align:center;font-size:0.82rem;color:var(--text-muted);display:none;">
+          Waiting for all players to ready up before starting
+        </p>
+      </div>
+  </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    // ─── State ─────────────────────────────────────────────────────
+    const socket = io();
+    let playerId = sessionStorage.getItem('playerId');
+    let roomCode = sessionStorage.getItem('roomCode');
+    let username = sessionStorage.getItem('username');
+    let isHost = false;
+    let totalRounds = 3;
+    let players = [];
+
+    if (!playerId || !roomCode) {
+      window.location.href = '/';
+    }
+
+    // ─── Utilities ─────────────────────────────────────────────────
+    function showToast(msg, type = '') {
+      const el = document.createElement('div');
+      el.className = `toast${type ? ' toast-' + type : ''}`;
+      el.textContent = msg;
+      document.getElementById('toast-container').appendChild(el);
+      setTimeout(() => el.remove(), 3200);
+    }
+
+    function initial(name) {
+      return (name || '?').charAt(0).toUpperCase();
+    }
+
+    // ─── Room Display ───────────────────────────────────────────────
+    document.getElementById('room-code-display').textContent = roomCode;
+    const inviteUrl = `${window.location.origin}/?room=${roomCode}`;
+    document.getElementById('invite-link').textContent = inviteUrl;
+
+    document.getElementById('copy-link-btn').addEventListener('click', () => {
+      navigator.clipboard.writeText(inviteUrl).then(() => showToast('Invite link copied! 📋', 'success'));
+    });
+
+    // ─── Render Players ────────────────────────────────────────────
+    function renderPlayers(list) {
+      players = list;
+      const me = list.find(p => p.id === playerId);
+      isHost = me?.isHost || false;
+
+      document.getElementById('player-count').textContent = `(${list.length}/8)`;
+
+      const allReady = list.every(p => p.isReady);
+      const canStart = list.length >= 2 && allReady;
+
+      // Start / Ready buttons
+      const startBtn = document.getElementById('start-btn');
+      const readyBtn = document.getElementById('ready-btn');
+      const notReadyNote = document.getElementById('not-ready-note');
+      const settingsBox = document.getElementById('settings-box');
+
+      if (isHost) {
+        startBtn.style.display = 'flex';
+        readyBtn.style.display = 'none';
+        startBtn.disabled = !canStart;
+        settingsBox.style.display = '';
+        notReadyNote.style.display = !allReady ? '' : 'none';
+      } else {
+        startBtn.style.display = 'none';
+        readyBtn.style.display = 'flex';
+        settingsBox.style.display = 'none';
+        notReadyNote.style.display = 'none';
+        if (me?.isReady) {
+          readyBtn.textContent = '🔄 Unready';
+          readyBtn.className = 'btn btn-ghost btn-lg w-full';
+        } else {
+          readyBtn.textContent = '✅ Ready Up';
+          readyBtn.className = 'btn btn-cyan btn-lg w-full';
+        }
+      }
+
+      document.getElementById('min-player-note').style.display = list.length < 2 ? '' : 'none';
+
+      // Grid
+      const grid = document.getElementById('players-grid');
+      grid.innerHTML = list.map(p => `
+        <div class="player-card${p.isReady ? ' ready' : ''}">
+          <div class="player-avatar" style="background:${p.color};">${initial(p.username)}</div>
+          <div class="player-name">${escHtml(p.username)}</div>
+          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:center;">
+            ${p.isHost ? '<span class="badge badge-amber">HOST</span>' : ''}
+            ${p.isReady ? '<span class="player-ready-icon">✅</span>' : '<span class="player-ready-icon" style="opacity:0.3">⏳</span>'}
+            ${p.id === playerId ? '<span class="badge badge-purple">You</span>' : ''}
+          </div>
+          ${isHost && !p.isHost ? `<button class="player-kick-btn" onclick="kickPlayer('${p.id}')" title="Kick player">✕</button>` : ''}
+        </div>
+      `).join('');
+    }
+
+    function kickPlayer(targetId) {
+      socket.emit('kick-player', { roomCode, hostId: playerId, targetId });
+    }
+
+    function escHtml(s) {
+      return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    // ─── Chat ─────────────────────────────────────────────────────
+    function appendChat(msg) {
+      const box = document.getElementById('chat-messages');
+      const el = document.createElement('div');
+      if (msg.system) {
+        el.className = 'chat-msg chat-msg-system';
+        el.textContent = msg.text;
+      } else {
+        el.className = 'chat-msg';
+        el.innerHTML = `<span class="chat-msg-username" style="color:${msg.color}">${escHtml(msg.username)}</span>${escHtml(msg.text)}`;
+      }
+      box.appendChild(el);
+      box.scrollTop = box.scrollHeight;
+    }
+
+    function sendChat() {
+      const input = document.getElementById('chat-input');
+      const text = input.value.trim();
+      if (!text) return;
+      socket.emit('chat-message', { roomCode, playerId, text });
+      input.value = '';
+    }
+
+    document.getElementById('chat-send').addEventListener('click', sendChat);
+    document.getElementById('chat-input').addEventListener('keydown', e => { if(e.key==='Enter') sendChat(); });
+
+    // ─── Settings ─────────────────────────────────────────────────
+    let roundsVal = 3;
+
+    document.getElementById('rounds-minus').addEventListener('click', () => {
+      if (roundsVal <= 1) return;
+      roundsVal--;
+      document.getElementById('rounds-val').textContent = roundsVal;
+      socket.emit('update-settings', { roomCode, playerId, totalRounds: roundsVal });
+    });
+    document.getElementById('rounds-plus').addEventListener('click', () => {
+      if (roundsVal >= 10) return;
+      roundsVal++;
+      document.getElementById('rounds-val').textContent = roundsVal;
+      socket.emit('update-settings', { roomCode, playerId, totalRounds: roundsVal });
+    });
+
+    // ─── Ready / Start ─────────────────────────────────────────────
+    document.getElementById('ready-btn').addEventListener('click', () => {
+      socket.emit('toggle-ready', { roomCode, playerId });
+    });
+    document.getElementById('start-btn').addEventListener('click', () => {
+      socket.emit('start-game', { roomCode, playerId });
+    });
+
+    // ─── Socket Events ─────────────────────────────────────────────
+    socket.on('player-list', renderPlayers);
+    socket.on('chat-message', appendChat);
+    socket.on('settings-updated', ({ totalRounds: r }) => {
+      totalRounds = r;
+      roundsVal = r;
+      document.getElementById('rounds-val').textContent = r;
+      document.getElementById('round-badge').textContent = `${r} Round${r > 1 ? 's' : ''}`;
+    });
+
+    socket.on('error', ({ message }) => showToast(message, 'error'));
+
+    socket.on('kicked', () => {
+      showToast('You were removed from the room.', 'error');
+      setTimeout(() => window.location.href = '/', 2000);
+    });
+
+    socket.on('phase-change', ({ phase }) => {
+      if (phase === 'drawing' || phase === 'copying' || phase === 'voting') {
+        window.location.href = '/game.html';
+      }
+    });
+
+    socket.on('connect', () => {
+      // Re-join if reconnected
+      socket.emit('rejoin', { roomCode, playerId });
+    });
+
+    // ─── Request current state on load ─────────────────────────────
+    // The server doesn't have a rejoin event yet so we redirect if no state
+    // Player data comes via player-list from server on join
+  </script>
+</body>
+</html>

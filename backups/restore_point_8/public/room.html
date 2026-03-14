@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Room — Copyright Artist</title>
+  <link rel="stylesheet" href="/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎨</text></svg>">
+</head>
+<body class="room-page">
+  <!-- Noise Overlay managed in CSS -->
+
+  <!-- Global Timer Well -->
+  <div id="global-timer-well" class="hidden">
+    <span class="well-icon">⏳</span>
+    <span id="global-timer-text">00</span>
+  </div>
+
+  <!-- Ink Bottle HUD -->
+  <div id="ink-bottle-hud" class="hidden">
+    <div class="ink-bottle">
+      <div class="ink-bottle-fill" style="height: 100%;"></div>
+    </div>
+    <div style="font-size: 1.2rem; font-weight: 900; text-transform: uppercase;">Ink</div>
+  </div>
+
+  <!-- Player List Panel (Roblox-style top-right) -->
+  <div id="players-panel">
+    <div id="players-panel-toggle">➖</div>
+    <div id="players-panel-list"></div>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toast-container"></div>
+
+  <!-- Ink Timer Bar (bottom) -->
+  <div id="ink-bar-container" class="hidden">
+    <div id="ink-bar-fill" style="width:100%"></div>
+    <span id="ink-bar-text">waiting...</span>
+  </div>
+
+  <!-- Dynamic Content Area -->
+  <main id="phase-container">
+    <div class="phase-screen">
+      <div class="lobby-card-lined">
+         <h1 class="handwritten">Loading room...</h1>
+      </div>
+    </div>
+  </main>
+
+  <div id="audio-container" style="display:none;">
+    <audio id="sfx-click" src="https://www.zapsplat.com/wp-content/uploads/2015/sound-effects-one/plastic_button_click.mp3"></audio>
+    <audio id="sfx-success" src="https://www.zapsplat.com/wp-content/uploads/2015/sound-effects-four-o-four/office_desk_bell_ring_ping.mp3"></audio>
+    <audio id="bg-music" loop></audio>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/scripts/room_manager.js"></script>
+</body>
+</html>

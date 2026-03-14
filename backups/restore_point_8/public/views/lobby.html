@@ -1,0 +1,46 @@
+<div id="view-lobby" class="phase-screen">
+  <!-- Logo Card Box -->
+  <div class="lobby-card-lined">
+    <div style="margin-bottom: 30px;">
+      <img src="/logo.png" style="width: 140px; height: auto; margin-top: 20px; margin-bottom: 15px; border-radius: 12px; box-shadow: var(--shadow);">
+      <h1 class="lobby-title">copyrighted<br>artists</h1>
+    </div>
+    <div style="font-size: 1.8rem; padding-top: 20px;">
+      game starts in <span id="lobby-countdown-timer" style="font-weight: bold; font-size: 2rem;">24</span>
+      <br>seconds
+    </div>
+    <div id="host-controls" class="hidden" style="margin-top: 20px;">
+      <button class="lobby-btn btn-start" id="start-btn">START GAME</button>
+      <!-- Jukebox Card -->
+      <div id="jukebox-card" class="card" style="margin-top:20px; text-align:left; padding:20px; background:#fff; border:2px solid #000; box-shadow: 4px 4px 0 #000;">
+        <h3 style="margin-bottom:10px; font-size: 1.4rem;">📻 Host Jukebox</h3>
+        <select id="music-select" class="jukebox-select">
+          <option value="/assets/sounds/AXIS1249_01_Crystal Dream_Full.mp3">Crystal Dream</option>
+          <option value="/assets/sounds/AXIS1232_06_Purely Pizzicato_Full.mp3">Purely Pizzicato</option>
+          <option value="/assets/sounds/AXIS1196_08_Tinsel Time_Full.mp3">Tinsel Time</option>
+        </select>
+        <div class="jukebox-controls">
+          <button class="btn btn-sm" id="music-play-btn" style="background:#eee; border:2px solid #000; padding:5px 15px; font-family:'Gochi Hand';">▶️ Play</button>
+          <button class="btn btn-sm" id="music-pause-btn" style="background:#eee; border:2px solid #000; padding:5px 15px; font-family:'Gochi Hand';">⏸️ Pause</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Fun Fact Card Box -->
+  <div class="lobby-card-lined">
+    <h2 style="font-size: 1.8rem; margin-bottom: 15px;" class="handwritten">fun fact</h2>
+    <div style="font-size: 1.6rem; padding-top: 15px;">
+      the original version of copyrighted artists took about a week to create
+    </div>
+    <p style="margin-top:20px; font-size: 1.2rem; color: #555;">Server Code: <strong id="room-code-display" class="info-value">------</strong></p>
+    <button class="lobby-btn btn-ready" id="ready-btn" style="margin-top:20px;">READY UP</button>
+  </div>
+
+  <!-- Right Column (Players) -->
+  <div id="lobby-players-area" style="position: relative; width: 400px; min-height: 400px; display: flex; flex-direction: column; justify-content: center;">
+    <div id="lobby-players-list" style="position: relative; z-index: 10;">
+      <!-- Player bubbles injected here -->
+    </div>
+  </div>
+</div>

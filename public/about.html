@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>About the Developer — Artful Mimic</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎨</text></svg>">
+  <style>
+    .about-wrap {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+    }
+    .profile-card {
+      max-width: 600px;
+      width: 100%;
+      background: #fff;
+      border: 2px solid #1A1A1A;
+      border-radius: 4px;
+      padding: 50px;
+      box-shadow: 10px 10px 0 rgba(0,0,0,0.05);
+      position: relative;
+      text-align: center;
+      background-image: repeating-linear-gradient(transparent, transparent 38px, #eee 38px, #eee 40px);
+      background-position: 0 10px;
+    }
+    .profile-header {
+      margin-bottom: 40px;
+    }
+    .profile-title {
+      font-family: 'Gochi Hand', cursive;
+      font-size: 3.5rem;
+      margin-bottom: 5px;
+    }
+    .profile-bio {
+      font-family: 'Gochi Hand', cursive;
+      font-size: 1.6rem;
+      line-height: 1.6;
+      text-align: left;
+      margin-bottom: 40px;
+    }
+    .donation-section {
+      background: #fdfbf7;
+      border: 2px dashed #1A1A1A;
+      padding: 30px;
+      margin-top: 20px;
+      border-radius: 8px;
+    }
+    .donation-title {
+      font-family: 'Gochi Hand', cursive;
+      font-size: 2rem;
+      margin-bottom: 15px;
+    }
+    .donation-btn {
+      display: inline-block;
+      background: #1A1A1A;
+      color: #fff;
+      padding: 15px 30px;
+      border-radius: 50px;
+      font-family: 'Outfit', sans-serif;
+      font-weight: 900;
+      font-size: 1.2rem;
+      text-decoration: none;
+      transition: transform 0.2s, background 0.2s;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      margin-top: 15px;
+    }
+    .donation-btn:hover {
+      transform: scale(1.05);
+      background: #333;
+    }
+    .nav-btn {
+      position: absolute;
+      top: -20px;
+      left: 20px;
+      background: #fff;
+      border: 2px solid #000;
+      padding: 5px 20px;
+      font-family: 'Gochi Hand';
+      text-decoration: none;
+      color: #000;
+      font-size: 1.2rem;
+      box-shadow: 4px 4px 0 #000;
+    }
+    .fampay-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      background: #ff7f50;
+      color: white;
+      border-radius: 4px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 900;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body class="home-page">
+  <div class="about-wrap anim-fade">
+    <div class="profile-card anim-slide-up">
+      <a href="/" class="nav-btn">← Back to Hub</a>
+      
+      <div class="profile-header">
+        <h1 class="profile-title">Digvijay Kumar</h1>
+        <p style="font-size: 1.2rem; opacity: 0.7;">Known as <strong>Fedalloki</strong> — The Artist Behind the Ink</p>
+      </div>
+
+      <div class="profile-bio">
+        <p>I am a 15-year-old web developer and a beginner in Roblox development. Creating <strong>Artful Mimic</strong> has been a journey through ink and code, bringing a premium drawing experience to local servers!</p>
+        <br>
+        <p>Outside of coding, I'm a huge football fan. I believe in simple, clean design and interactive fun.</p>
+        <br>
+        <p style="font-size: 0.9rem; opacity: 0.6;">* Infinitely inspired by the 'Copyrighted Artists' game on Roblox by the original creators.</p>
+      </div>
+
+      <div class="donation-section">
+        <h2 class="donation-title">Support the Server 🚀</h2>
+        <p style="font-size: 1.2rem; color: #555; margin-bottom: 10px;">Our servers run on the kindness of our community. If you enjoy the game, consider supporting the growth of the gallery!</p>
+        
+        <div class="fampay-badge">Powered by FamPay</div>
+        <br>
+        <button id="donate-btn" class="donation-btn" style="border:none; cursor:pointer;">DONATE VIA UPI</button>
+        <p id="donation-status" style="margin-top: 15px; font-size: 0.9rem; color: #888;">Tap to open your UPI app (India only)</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('donate-btn').onclick = () => {
+      // Direct redirect to the professional checkout gateway
+      window.location.href = '/checkout.html';
+    };
+  </script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+<div id="view-copying" class="phase-screen">
+  <div style="display:flex;flex-direction:column;align-items:center;">
+    <div class="canvas-toolbar" id="copy-toolbar">
+      <button class="tool-btn color-btn active" style="background:#1A1A1A;" data-color="#1A1A1A"></button>
+      <button class="tool-btn color-btn" style="background:#e74c3c;" data-color="#e74c3c"></button>
+      <button class="tool-btn color-btn" style="background:#3498db;" data-color="#3498db"></button>
+      <button class="tool-btn color-btn" style="background:#27ae60;" data-color="#27ae60"></button>
+      <button class="tool-btn color-btn" style="background:#f1c40f;" data-color="#f1c40f"></button>
+      <div class="tool-divider"></div>
+      <button class="tool-btn tool-eraser" data-color="#ffffff" title="Eraser">Sweep</button>
+      <div class="tool-divider"></div>
+      <button class="tool-btn tool-size" data-size="4" title="Small">●</button>
+      <button class="tool-btn tool-size active" data-size="10" title="Medium">●</button>
+      <button class="tool-btn tool-size" data-size="20" title="Large">●</button>
+      <div class="tool-divider"></div>
+      <button class="tool-btn tool-clear" id="copy-clear-btn">CLR ALL</button>
+    </div>
+    <canvas id="copying-canvas" width="340" height="480"></canvas>
+    <div class="canvas-controls">
+      <button class="canvas-btn" id="copying-undo-btn">undo</button>
+      <button class="canvas-btn primary" id="copying-submit-btn">submit</button>
+    </div>
+  </div>
+</div>
