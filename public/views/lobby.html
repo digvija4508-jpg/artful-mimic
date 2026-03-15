@@ -3,10 +3,11 @@
   <div class="lobby-card-lined">
     <div style="margin-bottom: 30px;">
       <img src="/logo.png" style="width: 140px; height: auto; margin-top: 20px; margin-bottom: 15px; border-radius: 12px; box-shadow: var(--shadow);">
-      <h1 class="lobby-title">artful<br>mimic</h1>
+      <h1 class="lobby-title">copyrighted<br>artists</h1>
     </div>
-    <div style="font-size: 1.6rem; padding-top: 20px; color: #d35400; font-weight: 800;">
-      minimum players required <span id="lobby-countdown-timer" style="font-size: 2.2rem;">2</span>
+    <div style="font-size: 1.8rem; padding-top: 20px;">
+      game starts in <span id="lobby-countdown-timer" style="font-weight: bold; font-size: 2rem;">24</span>
+      <br>seconds
     </div>
     <div id="host-controls" class="hidden" style="margin-top: 20px;">
       <button class="lobby-btn btn-start" id="start-btn">START GAME</button>
@@ -22,10 +23,6 @@
           <button class="btn btn-sm" id="music-play-btn" style="background:#eee; border:2px solid #000; padding:5px 15px; font-family:'Gochi Hand';">▶️ Play</button>
           <button class="btn btn-sm" id="music-pause-btn" style="background:#eee; border:2px solid #000; padding:5px 15px; font-family:'Gochi Hand';">⏸️ Pause</button>
         </div>
-        <div style="margin-top: 15px; display: flex; align-items: center; gap: 10px;">
-          <span style="font-size: 1.2rem;">🔊</span>
-          <input type="range" id="volume-slider" min="0" max="100" value="50" style="flex: 1; cursor: pointer;">
-        </div>
       </div>
     </div>
   </div>
@@ -34,18 +31,16 @@
   <div class="lobby-card-lined">
     <h2 style="font-size: 1.8rem; margin-bottom: 15px;" class="handwritten">fun fact</h2>
     <div style="font-size: 1.6rem; padding-top: 15px;">
-      the original version of artful mimic took about 2 days to create
+      the original version of copyrighted artists took about a week to create
     </div>
     <p style="margin-top:20px; font-size: 1.2rem; color: #555;">Server Code: <strong id="room-code-display" class="info-value">------</strong></p>
     <button class="lobby-btn btn-ready" id="ready-btn" style="margin-top:20px;">READY UP</button>
   </div>
 
   <!-- Right Column (Players) -->
+  <div id="lobby-players-area" style="position: relative; width: 400px; min-height: 400px; display: flex; flex-direction: column; justify-content: center;">
     <div id="lobby-players-list" style="position: relative; z-index: 10;">
       <!-- Player bubbles injected here -->
-    </div>
-    <div style="margin-top: 30px; text-align: center; font-family: 'Gochi Hand'; opacity: 0.5;">
-      <a href="/about.html" style="color: #000; text-decoration: underline;">Meet the Dev & Support Server</a>
     </div>
   </div>
 </div>

@@ -3,7 +3,6 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
-const https = require('https');
 const { v4: uuidv4 } = require('uuid');
 const { createClient } = require('@supabase/supabase-js');
 
@@ -31,27 +30,12 @@ process.on('unhandledRejection', (reason, promise) => {
   console.error('🔥 CRITICAL: Unhandled Rejection at:', promise, 'reason:', reason);
 });
 
-// ─── Middleware & Security ──────────────────────────────────────────────────
-app.use((req, res, next) => {
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'DENY');
-  res.setHeader('X-XSS-Protection', '1; mode=block');
-  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
-  next();
-});
-
+// ─── Middleware ──────────────────────────────────────────────────────────────
 app.use(express.static(path.join(__dirname, 'public')));
-
-// Simple Rate Limiter for QR Proxy
-const qrRateLimit = new Map();
-const QR_LIMIT_MS = 60000; // 1 minute
-const QR_MAX_REQUESTS = 10;
 
 // ─── Dynamic Routing ─────────────────────────────────────────────────────────
 // Serve room.html for any /room/:code path
 app.get('/room/:code', (req, res) => {
-  const code = req.params.code.toUpperCase().replace(/[^A-Z0-9]/g, '');
-  if (code.length !== 6) return res.redirect('/');
   res.sendFile(path.join(__dirname, 'public', 'room.html'));
 });
 
@@ -74,40 +58,18 @@ function clearRoomTimers(roomCode) {
 
 // ─── Data & Prompts ──────────────────────────────────────────────────────────
 const PROMPTS = [
-  "A cat driving a school bus", "Yoda playing tennis with a lightsaber", "A penguin wearing a Hawaiian shirt at the beach",
-  "Spider-Man trying to cook spaghetti", "A giraffe with a very short neck", "A pizza slice eating a human",
-  "A robot crying over spilled oil", "Batman buying groceries", "A squirrel lifting miniature weights",
-  "An elephant on a unicycle", "Spongebob in a tuxedo", "A cactus having a midlife crisis",
-  "A dinosaur wearing a tutu", "An avocado doing yoga", "A disco-dancing potato",
-  "A shark in a business suit", "A monkey playing a grand piano", "A toilet that is actually a portal",
-  "A cloud raining marshmallows", "A bee wearing sneakers", "A turtle in a race car",
-  "A toaster that burns bread into emojis", "An alien taking a selfie", "A dog in a space suit",
-  "A wizard failing a magic trick", "A snowman in a sauna", "A chicken crossing the road with a map",
-  "A rubber ducky as a giant monster", "A snail on a rocket ship", "A piece of toast with a face of a celebrity",
-  "A literal 'Butterfly' (Butter on wings)", "A 'Hot Dog' that is actually on fire", "A 'Cat-erpillar' (Cat as a bug)",
-  "A 'Lion-fish' (Lion with a fish tail)", "A 'Horse-power' (Horse inside an engine)", "A giant donut as a planet",
-  "A pencil drawing itself", "A lightbulb with a brain inside", "A tree with hands instead of leaves",
-  "A mountain that is actually a sleeping giant", "A banana skin as a skateboard", "A cupcake with a crown",
-  "A strawberry wearing sunglasses", "A broccoli as a rockstar", "A carrot as a secret agent",
-  "A tomato as a boxer", "A pea in a pod but it's a spaceship", "An egg with legs running away",
-  "A milk carton mourning its lost cap", "A cheese block as a mouse's house", "The Mona Lisa but she's a potato",
-  "Inception but with stacks of pancakes", "A Cyberpunk rickshaw in New Delhi", "A Steampunk toaster that flies",
-  "A surrealist painting of a clock melting over a burger", "The Statue of Liberty holding a giant slice of pizza",
-  "An astronaut gardening on the moon", "A dragon made entirely of origami", "A city built on the back of a giant whale",
-  "A forest where the trees are giant mushrooms", "A waterfall made of neon soda", "A library where the books are flying",
-  "A clock where the numbers are escaping", "A person made of lightning", "A ghost trying to wear a hat",
-  "A vampire at a blood bank", "A werewolf salon", "A mummy wrapped in colorful tape",
-  "A zombie eating a brain-shaped cake", "A mythical phoenix rising from a pile of laundry",
-  "A unicorn with a drill instead of a horn", "A pegasus trying to land on a high-wire", "A mermaid in a bathtub",
-  "A centaur playing basketball", "A minotaur in a china shop", "A medusa with spaghetti for hair",
-  "A cyclops looking through a telescope", "A troll under a bridge with a toll booth", "A giant with a tiny house",
-  "A dwarf with a huge hammer", "An elf as a rock guitarist", "A goblin as a banker",
-  "A pixie painting a flower", "A dryad (tree spirit) as a DJ", "A selkie (seal person) in a rain coat",
-  "A chimera having a group argument", "A hydra with each head wearing a different hat", "A kraken in a swimming pool",
-  "A yeti eating an ice cream cone", "A bigfoot taking a blurry photo of a human", "A loch ness monster wearing a scarf",
-  "A mothman attracted to a giant iPad", "A jackalope in a tuxedo", "A chupacabra drinking a milkshake",
-  "A jersey devil playing ice hockey", "A thunderbird with a jet engine", "A kitsune as a waitress",
-  "A tanuki with a giant drum", "A kappa in a sushi restaurant", "A phoenix rising from a burnt toast"
+  "Pikachu in a courtroom", "SpongeBob doing taxes", "Mickey Mouse as a villain",
+  "Darth Vader eating cereal", "Shrek at the Oscars", "Sonic the Hedgehog sleeping",
+  "Batman buying groceries", "Elsa riding a skateboard", "Gollum at the gym",
+  "Dora the Explorer as a CEO", "Iron Man doing yoga", "Thanos at a birthday party",
+  "Mario working at McDonald's", "The Hulk knitting", "Winnie the Pooh in space",
+  "Gandalf at Starbucks", "Yoda playing tennis", "Minions at the museum",
+  "Captain America doing laundry", "Simba at a job interview", "Dumbledore at the DMV",
+  "Elmo at a heavy metal concert", "Buzz Lightyear at the dentist", "Goku paying bills",
+  "Naruto taking an exam", "Tom and Jerry at a library", "Panda from Kung Fu Panda cooking",
+  "The Joker at a comedy club", "Moana in Antarctica", "Wall-E in a mansion",
+  "Stitch at a wedding", "Deadpool teaching kindergarten", "Thor doing laundry",
+  "Optimus Prime at a traffic light", "Scooby Doo solving a math problem"
 ];
 
 function generateRoomCode() {
@@ -359,20 +321,7 @@ async function nextPhaseAfterVoting(roomCode) {
     const finalPlayers = players
       .map(p => ({ id: p.id, username: p.username, color: p.color, score: p.score || 0 }))
       .sort((a,b) => b.score - a.score);
-    
-    // First show final scoreboard
-    io.to(roomCode).emit('phase-change', { 
-      phase: 'results', 
-      duration: 5,
-      players: finalPlayers,
-      round: currentRound,
-      isFinal: true
-    });
-
-    const t = setTimeout(() => {
-      io.to(roomCode).emit('phase-change', { phase: 'ended', players: finalPlayers });
-    }, 5 * 1000);
-    gameTimers[roomCode] = [t];
+    io.to(roomCode).emit('phase-change', { phase: 'ended', players: finalPlayers });
   } else {
      // Show intermediate results (scoreboard) after every round
      if (supabase) {
@@ -551,15 +500,10 @@ io.on('connection', (socket) => {
      const room = await getRoomData(code);
      if (!room) return;
      
-     // Check if host and min players
+     // Check if host
      const players = await getPlayersInRoom(code);
      const player = players.find(p => p.id === playerId);
      if (!player || !(player.is_host || player.isHost)) return;
-
-     if (players.length < 2) {
-       socket.emit('error', { message: 'Minimum 2 players required to start.' });
-       return;
-     }
 
      console.log(`🚀 Host ${player.username} started the game in ${code}`);
      
@@ -853,89 +797,11 @@ io.on('connection', (socket) => {
     io.to(code).emit('music-update', { currentMusic: room.currentMusic || DEFAULT_MUSIC[0], musicPlaying: playing });
   });
 
-  socket.on('back-to-lobby', async ({ roomCode, playerId }) => {
-    const code = roomCode.toUpperCase();
-    const room = await getRoomData(code);
-    const players = await getPlayersInRoom(code);
-    const player = players.find(p => p.id === playerId);
-    if (!player) return;
-
-    // Reset room state
-    const updateData = {
-      phase: 'lobby',
-      round: 0,
-      payload: {
-        drawings: {},
-        copies: {},
-        votes: {},
-        prompts: {},
-        gallery: [],
-        currentVotingSetIndex: 0,
-        setVotes: {}
-      }
-    };
-
-    if (supabase) {
-      await supabase.from('rooms').update(updateData).eq('code', code);
-      await supabase.from('players').update({ is_ready: false, score: 0 }).eq('room_code', code);
-      // Host stays ready usually or we can reset all
-      await supabase.from('players').update({ is_ready: true }).eq('id', player.id);
-    } else {
-      mockRooms[code] = { 
-        ...mockRooms[code], 
-        ...updateData,
-        payload: updateData.payload 
-      };
-      mockRooms[code].players.forEach(p => {
-        p.score = 0;
-        p.is_ready = (p.id === player.id);
-      });
-    }
-
-    const updatedPlayers = await getPlayersInRoom(code);
-    io.to(code).emit('phase-change', { phase: 'lobby' });
-    io.to(code).emit('player-list', updatedPlayers.map(p => ({
-      id: p.id, username: p.username, color: p.color, 
-      isHost: p.is_host || p.isHost, isReady: p.is_ready || p.isReady, score: 0
-    })));
-  });
-
   socket.on('disconnect', async () => {
     // Basic cleanup: in a production app with Supabase, you might keep them in the DB
     // but mark them as offline. For now, we'll just handle the event.
   });
 });
 
-app.get('/api/qr-image', (req, res) => {
-  // Simple Rate Limiting Logic
-  const ip = req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-  const now = Date.now();
-  const userData = qrRateLimit.get(ip) || { count: 0, firstRequest: now };
-
-  if (now - userData.firstRequest > QR_LIMIT_MS) {
-    userData.count = 1;
-    userData.firstRequest = now;
-  } else {
-    userData.count++;
-  }
-  qrRateLimit.set(ip, userData);
-
-  if (userData.count > QR_MAX_REQUESTS) {
-    return res.status(429).send('Too many requests. Please wait a minute.');
-  }
-
-  const upiUrl = 'upi://pay?pa=digvijaykumar@fam&pn=Digvijay%20Kumar&cu=INR';
-  const externalApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(upiUrl)}&bgcolor=ffffff&color=000000&margin=1`;
-  
-  https.get(externalApiUrl, (apiRes) => {
-    res.setHeader('Content-Type', apiRes.headers['content-type']);
-    res.setHeader('Cache-Control', 'public, max-age=3600'); // Cache for 1 hour to reduce API hits
-    apiRes.pipe(res);
-  }).on('error', (err) => {
-    console.error('QR Proxy Error:', err);
-    res.status(500).send('Error generating QR');
-  });
-});
-
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`🎨 Artful Mimic live on port ${PORT}`));
+server.listen(PORT, () => console.log(`✅ Copyright Artist refactored on port ${PORT}`));

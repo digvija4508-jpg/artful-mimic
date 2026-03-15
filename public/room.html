@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Room — Artful Mimic</title>
+  <title>Room — Copyright Artist</title>
   <link rel="stylesheet" href="/style.css">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎨</text></svg>">
   <style>
@@ -42,68 +42,38 @@
     #global-timer-well.hurry { background: #e74c3c; animation: hurryPulse 0.5s infinite alternate; transform: scale(1.1) !important; }
     #global-timer-well.hidden { transform: translateY(160px) !important; opacity: 0; pointer-events: none; }
     
-    @keyframes stampIn {
-      from { transform: translate(-50%, -50%) rotate(-15deg) scale(3); opacity: 0; }
-      to { transform: translate(-50%, -50%) rotate(-15deg) scale(1); opacity: 0.9; }
-    }
-
-    /* ─── Premium Stamps ─── */
+    /* ─── STAMPS ─────────────────────────────────────────────────────── */
     .reveal-stamp {
       position: absolute;
       top: 50%; left: 50%;
       transform: translate(-50%, -50%) rotate(-15deg);
       font-family: 'Outfit', sans-serif;
       font-weight: 900;
-      font-size: 3.5rem;
-      padding: 15px 30px;
+      font-size: 3rem;
+      padding: 10px 20px;
+      border: 8px double;
       text-transform: uppercase;
-      letter-spacing: 0.15em;
+      letter-spacing: 0.1em;
       pointer-events: none;
-      z-index: 50;
+      z-index: 20;
       opacity: 0;
-      animation: stampIn 0.4s cubic-bezier(.34,1.56,.64,1) forwards;
+      animation: stampIn 0.5s cubic-bezier(.34,1.56,.64,1) forwards;
       mix-blend-mode: multiply;
-      white-space: nowrap;
     }
-
     .reveal-stamp.original {
-      color: #b33939; /* Deep Red/Wax */
-      border: 6px double #b33939;
-      background: radial-gradient(circle, rgba(179, 57, 57, 0.1) 0%, rgba(179, 57, 57, 0.2) 100%);
-      box-shadow: inset 0 0 15px rgba(179, 57, 57, 0.3);
-      mask-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+      color: #27ae60;
+      border-color: #27ae60;
+      background: rgba(39, 174, 96, 0.1);
     }
-
     .reveal-stamp.copy {
-      color: #2f3542; /* Inky Slate */
-      border: 4px solid #2f3542;
-      border-radius: 4px;
-      background: transparent;
-      font-family: 'Gochi Hand';
-      text-decoration: underline wavy #2f3542;
-      opacity: 0.7 !important;
-      mask-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence baseFrequency='0.5'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23noise)'/%3E%3C/svg%3E");
+      color: #f1c40f;
+      border-color: #f1c40f;
+      background: rgba(241, 196, 15, 0.1);
     }
-
-    /* ─── Volume Slider ─── */
-    input[type=range]#volume-slider {
-      appearance: none;
-      height: 6px;
-      background: #ddd;
-      border-radius: 10px;
-      outline: none;
-      border: 1px solid #000;
+    @keyframes stampIn {
+      from { transform: translate(-50%, -50%) rotate(-15deg) scale(3); opacity: 0; }
+      to { transform: translate(-50%, -50%) rotate(-15deg) scale(1); opacity: 0.8; }
     }
-    input[type=range]#volume-slider::-webkit-slider-thumb {
-      appearance: none;
-      width: 18px;
-      height: 18px;
-      background: #000;
-      border-radius: 50%;
-      cursor: pointer;
-      transition: transform 0.1s;
-    }
-    input[type=range]#volume-slider::-webkit-slider-thumb:hover { transform: scale(1.2); }
 
     .lb-row {
       transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.2s;
@@ -712,10 +682,11 @@
     <div class="lobby-card-lined">
       <div style="margin-bottom: 30px;">
         <img src="/logo.png" style="width: 140px; height: auto; margin-top: 20px; margin-bottom: 15px; border-radius: 12px; box-shadow: var(--shadow);">
-        <h1 style="font-size: 2.5rem; margin-bottom: 0px; line-height: 1.1; font-family: 'Gochi Hand', cursive; font-weight: 900;">artful<br>mimic</h1>
+        <h1 style="font-size: 2.5rem; margin-bottom: 0px; line-height: 1.1; font-family: 'Gochi Hand', cursive; font-weight: 900;">copyrighted<br>artists</h1>
       </div>
-      <div style="font-size: 1.6rem; padding-top: 20px; color: #d35400; font-weight: 800;">
-        minimum players required <span id="lobby-countdown-timer" style="font-size: 2.2rem;">4</span>
+      <div style="font-size: 1.8rem; padding-top: 20px;">
+        game starts in <span id="lobby-countdown-timer" style="font-weight: bold; font-size: 2rem;">24</span>
+        <br>seconds
       </div>
       <div id="host-controls" class="hidden" style="margin-top: 20px;">
         <button class="lobby-btn" id="start-btn" style="background:#27ae60;">START GAME</button>
@@ -740,7 +711,7 @@
     <div class="lobby-card-lined">
       <h2 style="font-size: 1.8rem; margin-bottom: 15px;">fun fact</h2>
       <div style="font-size: 1.6rem; padding-top: 15px;">
-        the original version of artful mimic took about 2 days to create
+        the original version of copyrighted artists took about a week to create
       </div>
       <p style="margin-top:20px; font-size: 1.2rem; color: #555;">Server Code: <strong id="room-code-display">------</strong></p>
       <button class="lobby-btn" id="ready-btn" style="margin-top:20px;">READY UP</button>
@@ -1199,23 +1170,13 @@
     const container = document.getElementById('voting-cards');
     container.innerHTML = '';
 
-    // Clear the dedicated notice container if it exists
-    let noticeContainer = document.getElementById('voting-participation-notice-container');
-    if (!noticeContainer) {
-      // If not in HTML, create it dynamically before the cards
-      noticeContainer = document.createElement('div');
-      noticeContainer.id = 'voting-participation-notice-container';
-      noticeContainer.style.cssText = "width: 100%; text-align: center; margin-bottom: 20px; min-height: 48px; display: flex; justify-content: center;";
-      container.parentNode.insertBefore(noticeContainer, container);
-    }
-    noticeContainer.innerHTML = '';
-
     if (isMySet) {
       const msg = document.createElement('div');
       msg.className = 'voting-participation-notice';
       msg.textContent = "You participated in this set. You can see the drawings but cannot vote.";
-      msg.style.cssText = "display: inline-block; font-family: 'Gochi Hand', cursive; font-size: 1.2rem; background: rgba(0,0,0,0.05); padding: 10px 20px; border-radius: 8px; font-weight: 700; border: 1px dashed #000;";
-      noticeContainer.appendChild(msg);
+      msg.style.cssText = "grid-column: 1/-1; text-align: center; font-size: 1.2rem; background: rgba(0,0,0,0.05); padding: 10px; border-radius: 8px; margin-bottom: 20px; font-weight: 700;";
+      container.appendChild(msg);
+      // We DON'T return here anymore, we proceed to render cards but without click handlers
     }
 
     set.entries.forEach(entry => {

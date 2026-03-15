@@ -264,61 +264,12 @@ const phaseInitializers = {
 
   scores(data) {
     buildScoresUI(data.players, data.isFinal);
-    startTimer(data.duration || 15, 'next round starting soon');
-  },
-
-  scoreboard(data) {
-    buildFinalScoresUI(data.players);
-    const duration = data.duration || 5;
-    startTimer(duration, 'final winner reveal...');
-    
-    // Progress Bar & Countdown logic
-    const progressFill = document.getElementById('scoreboard-progress-fill');
-    const timerNum = document.getElementById('scoreboard-timer-num');
-    if (progressFill && timerNum) {
-      let timeLeft = duration;
-      const step = 0.1;
-      const interval = setInterval(() => {
-        timeLeft -= step;
-        if (timeLeft <= 0) {
-          clearInterval(interval);
-          timeLeft = 0;
-        }
-        if (progressFill) progressFill.style.width = (timeLeft / duration * 100) + '%';
-        if (timerNum) timerNum.textContent = Math.ceil(timeLeft);
-      }, step * 1000);
-    }
-
-    const hostCtrls = document.getElementById('host-scoreboard-controls');
-    const backBtn = document.getElementById('scoreboard-back-to-lobby-btn');
-    // Show for everyone as per user request
-    if (hostCtrls) hostCtrls.classList.remove('hidden');
-    if (backBtn) {
-      backBtn.onclick = () => {
-        socket.emit('back-to-lobby', { roomCode, playerId: myPlayerId });
-      };
-    }
+    startTimer(15, 'next round starting soon');
   },
 
   ended(data) {
+    buildFinalScoresUI(data.players);
     stopTimer();
-    const winner = data.players[0];
-    if (winner) {
-      const nameDisp = document.getElementById('winner-name-display');
-      const ptsDisp = document.getElementById('winner-points-display');
-      if (nameDisp) nameDisp.textContent = winner.username;
-      if (ptsDisp) ptsDisp.textContent = `${winner.score.toLocaleString()} points`;
-    }
-
-    const hostCtrls = document.getElementById('host-ended-controls');
-    const backBtn = document.getElementById('back-to-lobby-btn');
-    // Show for everyone as per user request
-    if (hostCtrls) hostCtrls.classList.remove('hidden');
-    if (backBtn) {
-      backBtn.onclick = () => {
-        socket.emit('back-to-lobby', { roomCode, playerId: myPlayerId });
-      };
-    }
   },
 
   waiting() {
@@ -403,20 +354,15 @@ function setupCanvas(canvas, ctx, historyArr, toolbarId) {
   function endStroke() {
     if (!drawing) return;
     drawing = false;
-    ctx.closePath();
-    if (currentPath && currentPath.points.length > 0) {
-      historyArr.push(currentPath);
-      currentPath = null;
-    }
+    if (currentPath.points.length > 0) historyArr.push({...currentPath});
   }
 
   canvas.addEventListener('mousedown', startStroke);
-  window.addEventListener('mousemove', doStroke);
-  window.addEventListener('mouseup', endStroke);
-
-  canvas.addEventListener('touchstart', (e) => { e.preventDefault(); startStroke(e); }, { passive: false });
-  window.addEventListener('touchmove', (e) => { if (drawing) e.preventDefault(); doStroke(e); }, { passive: false });
-  window.addEventListener('touchend', endStroke);
+  canvas.addEventListener('mousemove', doStroke);
+  canvas.addEventListener('mouseup', endStroke);
+  canvas.addEventListener('touchstart', (e) => { e.preventDefault(); startStroke(e); });
+  canvas.addEventListener('touchmove', (e) => { e.preventDefault(); doStroke(e); });
+  canvas.addEventListener('touchend', endStroke);
 }
 
 function undoCanvas(canvas, ctx, historyArr) {
@@ -505,10 +451,7 @@ socket.on('phase-change', async (data) => {
     }, (duration || 10) * 1000);
   } else if (phase === 'vote_set') loadPhase('voting', data);
   else if (phase === 'reveal_set') loadPhase('reveal', data);
-  else if (phase === 'results') {
-    if (data.isFinal) loadPhase('scoreboard', data);
-    else loadPhase('scores', data);
-  }
+  else if (phase === 'results') loadPhase('scores', data);
   else if (phase === 'ended') loadPhase('ended', data);
   else if (phase === 'final-round') loadPhase('final_round', data);
 });
@@ -522,24 +465,22 @@ socket.on('your-prompt', (data) => {
 // ── Gallery & Scoreboards ────────────────────────────────────────────────────
 function buildVotingUI(set, participants) {
   const container = document.getElementById('voting-cards');
-  const noticeContainer = document.getElementById('voting-participation-notice-container');
   if (!container || !set) return;
   document.getElementById('voting-prompt-title').textContent = set.prompt;
   const isMySet = participants && participants.includes(myPlayerId);
   container.innerHTML = '';
-  if (noticeContainer) noticeContainer.innerHTML = '';
 
-  if (isMySet && noticeContainer) {
+  if (isMySet) {
     const msg = document.createElement('div');
-    msg.style.cssText = "display: inline-block; font-family: 'Gochi Hand', cursive; font-size: 1.2rem; background: rgba(0,0,0,0.05); padding: 10px 20px; border-radius: 8px; font-weight: 700; border: 1px dashed #000;";
+    msg.style.cssText = "grid-column: 1/-1; text-align: center; font-size: 1.2rem; background: rgba(0,0,0,0.05); padding: 10px; border-radius: 8px; margin-bottom: 20px; font-weight: 700;";
     msg.textContent = "You participated in this set. You can see the drawings but cannot vote.";
-    noticeContainer.appendChild(msg);
+    container.appendChild(msg);
   }
 
   set.entries.forEach(entry => {
     const card = document.createElement('div');
     card.className = 'vote-card' + (isMySet ? ' disabled-card' : '');
-    card.innerHTML = `<img src="${entry.dataUrl || '/logo.png'}" class="vote-card-img" alt="Artwork"><div class="vote-card-label">${isMySet ? 'view only' : 'pick me!'}</div>`;
+    card.innerHTML = `<img src="${entry.dataUrl}" class="vote-card-img"><div class="vote-card-label">${isMySet ? 'view only' : 'pick me!'}</div>`;
     if (!isMySet) {
       card.onclick = () => {
         container.querySelectorAll('.vote-selection-badge').forEach(b => b.remove());
@@ -567,14 +508,13 @@ function buildRevealUI(set, results) {
   });
 
   set.entries.forEach(entry => {
-    // CRITICAL: The server sends isOriginal flag. We strictly respect it.
-    const isOrig = entry.isOriginal === true;
+    const isOrig = entry.playerId === set.originalOwnerId;
     const card = document.createElement('div');
     card.className = 'reveal-card polaroid' + (isOrig ? ' original-card' : '');
     card.innerHTML = `
       <div class="reveal-voter-row">${(voterMap[entry.playerId] || []).map(n => `<div class="reveal-voter-badge-box">${n}</div>`).join('')}</div>
       <div class="reveal-card-header">${isOrig ? 'ORIGINAL' : 'COPY'}</div>
-      <img src="${entry.dataUrl || '/logo.png'}" class="reveal-card-img" alt="Artwork">
+      <img src="${entry.dataUrl}" class="reveal-card-img">
       <div class="reveal-stamp ${isOrig ? 'original' : 'copy'}">${isOrig ? 'Original' : 'Copy'}</div>
       <div class="reveal-card-footer">by ${entry.username || 'Artist'}</div>
     `;
@@ -618,18 +558,7 @@ function buildScoresUI(players, isFinal) {
 
 function buildFinalScoresUI(players) {
   const list = document.getElementById('final-scores-list');
-  if (list) {
-    list.innerHTML = players.map(p => {
-      const isHost = p.isHost || p.is_host;
-      return `<div class="score-row ${p.id === myPlayerId ? 'me-row' : ''}">
-        <div class="score-row-bullet">
-          <span>${isHost ? '👑' : '•'}</span>
-          <span>${p.username}</span>
-        </div>
-        <div>${p.score}</div>
-      </div>`;
-    }).join('');
-  }
+  if (list) list.innerHTML = players.map(p => `<div class="score-row ${p.id === myPlayerId ? 'me-row' : ''}"><div class="score-row-bullet"><span>•</span><span>${p.username}</span></div><div>${p.score}</div></div>`).join('');
 }
 
 // ── UI Components ────────────────────────────────────────────────────────────
@@ -673,23 +602,6 @@ function checkHostControls(players) {
     if (isHost) hostCtrls.classList.remove('hidden');
     else hostCtrls.classList.add('hidden');
   }
-  
-  const startBtn = document.getElementById('start-btn');
-  if (startBtn && isHost) {
-    const minPlayers = 2;
-    const allReady = players.every(p => p.isReady || p.is_ready);
-    if (players.length >= minPlayers && allReady) {
-      startBtn.disabled = false;
-      startBtn.classList.add('btn-pulse');
-      startBtn.title = "Start Game";
-    } else {
-      startBtn.disabled = true;
-      startBtn.classList.remove('btn-pulse');
-      if (players.length < minPlayers) startBtn.title = `Need ${minPlayers} players to start (Current: ${players.length})`;
-      else startBtn.title = "Waiting for all players to be ready";
-    }
-  }
-
   const readyBtn = document.getElementById('ready-btn');
   if (readyBtn) {
     if (isHost) {
@@ -699,20 +611,6 @@ function checkHostControls(players) {
       readyBtn.textContent = 'READY UP';
       readyBtn.disabled = false;
     }
-  }
-}
-
-// ── Volume Control ─────────────────────────────────────────
-function initVolumeControl() {
-  const slider = document.getElementById('volume-slider');
-  const bgMusic = document.getElementById('bg-music');
-  if (slider && bgMusic) {
-    slider.oninput = (e) => {
-      bgMusic.volume = e.target.value / 100;
-    };
-    // Default 50%
-    bgMusic.volume = 0.5;
-    slider.value = 50;
   }
 }
 
