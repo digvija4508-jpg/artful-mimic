@@ -56,6 +56,23 @@ function clearRoomTimers(roomCode) {
   }
 }
 
+async function deleteRoomData(roomCode) {
+  const code = roomCode.toUpperCase();
+  console.log(`🧹 Cleaning up room: ${code}`);
+  clearRoomTimers(code);
+  delete mockRooms[code];
+  delete roomStateLocks[code];
+  // In a real production with Supabase, we might mark as inactive or delete records here.
+  if (supabase) {
+    try {
+      await supabase.from('players').delete().eq('room_code', code);
+      await supabase.from('rooms').delete().eq('code', code);
+    } catch (e) {
+      console.error(`❌ Supabase cleanup error for ${code}:`, e);
+    }
+  }
+}
+
 // ─── Data & Prompts ──────────────────────────────────────────────────────────
 const PROMPTS = [
   "Pikachu in a courtroom", "SpongeBob doing taxes", "Mickey Mouse as a villain",
@@ -798,10 +815,67 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', async () => {
-    // Basic cleanup: in a production app with Supabase, you might keep them in the DB
-    // but mark them as offline. For now, we'll just handle the event.
+    console.log(`🔌 Client disconnected: ${socket.id}`);
+    
+    // Find player and room
+    let roomCodeToCleanup = null;
+    
+    if (supabase) {
+      // Logic for supabase would involve checking DB for socket_id
+    } else {
+      for (const code in mockRooms) {
+        const room = mockRooms[code];
+        const pIdx = room.players.findIndex(p => p.socket_id === socket.id);
+        if (pIdx !== -1) {
+          const p = room.players[pIdx];
+          console.log(`👤 Player ${p.username} left room ${code}`);
+          room.players.splice(pIdx, 1);
+          
+          if (room.players.length === 0) {
+            roomCodeToCleanup = code;
+          } else {
+            // Notify others
+            io.to(code).emit('player-list', room.players.map(p => ({
+              id: p.id, username: p.username, color: p.color, 
+              isHost: p.is_host || p.isHost, isReady: p.is_ready || p.isReady, score: p.score
+            })));
+          }
+          break;
+        }
+      }
+    }
+
+    if (roomCodeToCleanup) {
+      // Delay cleanup in case of quick refresh
+      setTimeout(async () => {
+        const room = await getRoomData(roomCodeToCleanup);
+        const players = await getPlayersInRoom(roomCodeToCleanup);
+        if (players.length === 0) {
+          await deleteRoomData(roomCodeToCleanup);
+        }
+      }, 5000);
+    }
   });
 });
+
+// ─── Garbage Collector ────────────────────────────────────────────────────────
+// Scan for stale rooms every 30 minutes
+setInterval(async () => {
+  console.log('🕵️ Running Garbage Collector...');
+  const now = Date.now();
+  
+  if (supabase) {
+    // In Supabase mode, we'd query for rooms with updatedAt > X
+  } else {
+    for (const code in mockRooms) {
+      // If room has no players, it's a candidate for deletion
+      if (mockRooms[code].players.length === 0) {
+        await deleteRoomData(code);
+      }
+      // Or if it's been in lobby too long? We could add a 'lastActive' timestamp.
+    }
+  }
+}, 30 * 60 * 1000); // 30 mins
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log(`✅ Copyright Artist refactored on port ${PORT}`));
