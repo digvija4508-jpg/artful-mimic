@@ -270,6 +270,27 @@ const phaseInitializers = {
   ended(data) {
     buildFinalScoresUI(data.players);
     stopTimer();
+    const btn = document.getElementById('back-to-lobby-btn');
+    if (btn) {
+      btn.onclick = () => socket.emit('back-to-lobby', { roomCode, playerId: myPlayerId });
+    }
+    const hostCtrls = document.getElementById('host-ended-controls');
+    if (hostCtrls) hostCtrls.classList.remove('hidden');
+  },
+
+  winner(data) {
+    const nameEl = document.getElementById('winner-name-display');
+    const pointsEl = document.getElementById('winner-points-display');
+    if (nameEl) nameEl.textContent = data.winnerName;
+    if (pointsEl) pointsEl.textContent = (data.winnerPoints || 0) + ' points';
+    
+    stopTimer();
+    const btn = document.getElementById('winner-back-to-lobby-btn');
+    if (btn) {
+      btn.onclick = () => socket.emit('back-to-lobby', { roomCode, playerId: myPlayerId });
+    }
+    const hostCtrls = document.getElementById('host-winner-controls');
+    if (hostCtrls) hostCtrls.classList.remove('hidden');
   },
 
   waiting() {
@@ -558,7 +579,17 @@ function buildScoresUI(players, isFinal) {
 
 function buildFinalScoresUI(players) {
   const list = document.getElementById('final-scores-list');
-  if (list) list.innerHTML = players.map(p => `<div class="score-row ${p.id === myPlayerId ? 'me-row' : ''}"><div class="score-row-bullet"><span>•</span><span>${p.username}</span></div><div>${p.score}</div></div>`).join('');
+  if (list) {
+    list.innerHTML = players.map(p => `
+      <div class="score-row ${p.id === myPlayerId ? 'me-row' : ''}">
+        <div class="score-row-bullet">
+          <span>•</span>
+          <span>${(p.isHost || p.is_host) ? '👑 ' : ''}${p.username}</span>
+        </div>
+        <div>${p.score}</div>
+      </div>
+    `).join('');
+  }
 }
 
 // ── UI Components ────────────────────────────────────────────────────────────
